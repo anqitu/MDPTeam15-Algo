@@ -10,10 +10,6 @@ from Connections.connection_client import Sender
 
 """This module defines the controller that sends messages to the Android."""
 
-__author__ = 'Harold Lim Jie Yu (1621635L)'
-__email__ = 'HARO0002@e.ntu.edu.sg'
-
-
 class Controller:
     """
     This class is the controller that relays messages to the Android.

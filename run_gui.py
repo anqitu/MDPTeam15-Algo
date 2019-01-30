@@ -4,8 +4,7 @@ import GUI.main_window as mw
 
 """This module starts an instance of the GUI application that simulates a run."""
 
-__author__ = 'Harold Lim Jie Yu (1621635L)'
-__email__ = 'HARO0002@e.ntu.edu.sg'
+__author__ = 'MDPTeam15'
 
 
 if __name__ == '__main__':

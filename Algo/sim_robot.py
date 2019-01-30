@@ -3,10 +3,6 @@ from time import time
 
 """This module defines the simulated Robot class."""
 
-__author__ = "Harold Lim Jie Yu (U1621635L)"
-__email__ = "HARO0002@e.ntu.edu.sg"
-
-
 class Robot:
     """
     This class is the simulation robot.
@@ -43,6 +39,7 @@ class Robot:
         if x < 0 or y_or_cell < 0:
             raise IndexError
 
+        # if exploration_status not 0
         if not self.exploration_status[y_or_cell][x]:
             self.exploration_status[y_or_cell][x] = 1
             self.discovered_map[y_or_cell][x] = self.real_map[y_or_cell][x]

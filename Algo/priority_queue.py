@@ -2,10 +2,6 @@ from heapq import heapify, heappush, heappop
 
 """This module defines the priority queue data structure used for the fastest path algorithm."""
 
-__author__ = "Cao Ngoc Thai (U1620058E)"
-__email__ = "CAON0001@e.ntu.edu.sg"
-
-
 class priority_queue(dict):
     def __init__(self, *args, **kwargs):
         super(priority_queue, self).__init__(*args, **kwargs)

@@ -5,10 +5,6 @@ from time import time, sleep
 
 """This module defines the Robot class that represents the robot in a physical run."""
 
-__author__ = "Harold Lim Jie Yu (U1621635L)"
-__email__ = "HARO0002@e.ntu.edu.sg"
-
-
 class Robot:
     """
     This class is a representation of the physical robot.

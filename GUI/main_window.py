@@ -11,8 +11,7 @@ from Algo.sim_robot import Robot
 
 """This module defines the main GUI window for the robot simulation."""
 
-__author__ = "Harold Lim Jie Yu (U1621635L)"
-__email__ = "HARO0002@e.ntu.edu.sg"
+__author__ = 'MDPTeam15'
 
 
 class TimeUp(Exception):
@@ -40,16 +39,8 @@ class Window(Frame):
     def _init_window(self):
         """
         Load all window elements.
-
-        :author: Harold Lim Jie Yu (U1621635L)
-        :email: HARO0002@e.ntu.edu.sg
-
-        :edited by: Cao Ngoc Thai (U1620058E)
-        :email: CAON0001@e.ntu.edu.sg
-
-        :return: N/A
         """
-        self._master.title("Robot Simulation")
+        self._master.title("MDP Team 15 Robot Simulation")
 
         self.pack(fill=BOTH, expand=1)
 
@@ -313,7 +304,11 @@ class Window(Frame):
                     updated_cells = run.send(0)
                     self._update_cells(updated_cells)
 
-                    direction, move_or_turn, updated_cells = run.send(0)
+                    run_send = run.send(0)
+                    print('direction, move_or_turn, updated_cells: '+ str(run_send))
+                    direction, move_or_turn, updated_cells = run_send
+
+                    # direction, move_or_turn, updated_cells = run.send(0)
                     sleep(timestep)
                     self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
                     self._update_cells(updated_cells)

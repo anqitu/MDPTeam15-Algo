@@ -4,12 +4,8 @@ import sys
 
 """ This module contains miscellaneous functions that are required throughout the program. """
 
-__author__ = "Harold Lim Jie Yu (U1621635L)"
-__email__ = "HARO0002@e.ntu.edu.sg"
-
-
 def get_matrix_coords(cell):
-    """ Calculate and return the xy coordinates of a given cell index. """
+    """ Calculate and return the yx coordinates of a given cell index. """
     x = (cell - 1) % NUM_COLS
     y = (cell - 1) // NUM_COLS
 
@@ -25,7 +21,7 @@ def get_grid_index(y, x):
 
 
 def get_robot_cells(cell):
-    """ Calculate and return the indexes of the cells that the robot is currently standing on. """
+    """ Calculate and return the list of indexes of the cells that the robot currently covered. """
     cells = [cell + ROW_LENGTH - 1, cell + ROW_LENGTH, cell + ROW_LENGTH + 1,
              cell - 1, cell, cell + 1,
              cell - (ROW_LENGTH + 1), cell - ROW_LENGTH, cell - (ROW_LENGTH - 1)]
@@ -38,9 +34,6 @@ def previous_cell(cell, facing):
     Calculate and return the xy coordinates of the previous cell the robot was standing on
 
     This function will calculate the xy coordinates given the current location and facing of the robot.
-
-    :author: Cao Ngoc Thai (U1620058E)
-    :email: CAON0001@e.ntu.edu.sg
 
     :param cell: The current center of the robot.
     :param facing: The current facing of the robot.
@@ -83,6 +76,8 @@ def get_fastest_path_move_string(fastest_path, for_exploration=False):
             move_str += get_arduino_cmd(FORWARD)
         else:
             move_str += 'n'
+
+    print(move_str)
 
     return move_str
 

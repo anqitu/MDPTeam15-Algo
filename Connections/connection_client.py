@@ -5,10 +5,6 @@ import Utils.utils as u
 
 """This module defines the Sender class that handles network communications."""
 
-__author__ = "Harold Lim Jie Yu (U1621635L)"
-__email__ = "HARO0002@e.ntu.edu.sg"
-
-
 class Sender:
     """This is the Sender that handles communications over the network."""
     def __init__(self, receive):

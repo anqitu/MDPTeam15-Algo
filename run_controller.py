@@ -3,11 +3,7 @@ import argparse
 from Controllers.controller import Controller
 import Utils.utils as u
 
-"""This module starts an instance of the CLI application that controls the robot during a physical run."""
-
-__author__ = 'Harold Lim Jie Yu (1621635L)'
-__email__ = 'HARO0002@e.ntu.edu.sg'
-
+"""This module starts an instance of the Algorithm application that controls the robot during a physical run."""
 
 if __name__ == '__main__':
 

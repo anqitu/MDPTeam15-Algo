@@ -3,10 +3,6 @@ import argparse
 
 """This module runs a dummy server to simulate the RPi to facilitate testing."""
 
-__author__ = "Harold Lim Jie Yu (U1621635L)"
-__email__ = "HARO0002@e.ntu.edu.sg"
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument('port', help='port number to connect to')
 args = parser.parse_args()

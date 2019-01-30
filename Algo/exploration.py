@@ -2,10 +2,6 @@ from Algo.fastest_path import *
 
 """This module defines the Exploration class that handles the exploration algorithm, along with Exceptions used."""
 
-__author__ = "Harold Lim Jie Yu (U1621635L)"
-__email__ = "HARO0002@e.ntu.edu.sg"
-
-
 class ExploreComplete(Exception):
     """
     This exception is raised when exploration is complete.
@@ -67,12 +63,14 @@ class Exploration:
         :return: True when exploration is complete and the robot is back in the start zone.
         """
         yield self._robot.mark_robot_standing()  # Mark initial robot space explored
+        # print('self._robot.mark_robot_standing(): ' + str(self._robot.mark_robot_standing()))
 
         is_back_at_start = False
         while True:
             try:
                 while not is_back_at_start:
                     updated_cells = self._robot.get_sensor_readings()
+                    print('updated_cells: ' + str(updated_cells))
                     yield updated_cells
 
                     if self._robot.check_free(LEFT) and not \
@@ -84,7 +82,11 @@ class Exploration:
                         yield FORWARD, MOVE, updated_cells
                     else:
                         if self._robot.in_efficiency_limit():
+                            print('self._robot.in_efficiency_limit(): ' + str(True))
+
                             if self._robot.check_free(LEFT):
+                                # print('self._robot.check_free(LEFT): ' + str(True))
+
                                 updated_cells = self._robot.move_robot(LEFT)
                                 yield LEFT, MOVE, updated_cells
                                 yield self._robot.is_complete(self._exploration_limit, self._start_time,
@@ -102,11 +104,20 @@ class Exploration:
                                 yield updated_cells
                                 self._robot.turn_robot(BACKWARD)
                                 yield BACKWARD, TURN, {}
+
+                            # Start (Add by Anqi)
+                            else:
+                                self._robot.turn_robot(RIGHT)
+                                yield RIGHT, TURN, {}
+                            # End (Add by Anqi)
+
                         else:
                             self._robot.turn_robot(RIGHT)
                             yield RIGHT, TURN, {}
 
+                    # print('self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)')
                     yield self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
+
                     if self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit):
                         raise ExploreComplete
 
@@ -195,6 +206,8 @@ class Exploration:
 
         moves = get_shortest_path_moves(self._robot,
                                         (center_y, center_x), (start_y, start_x), is_give_up=True)
+
+        print(moves)
 
         for move in moves:
             self._robot.move_robot(move)

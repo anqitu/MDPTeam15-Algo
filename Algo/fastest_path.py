@@ -4,10 +4,6 @@ from Utils.utils import *
 
 """This module defines the fastest path algorithm."""
 
-__author__ = "Cao Ngoc Thai (U1620058E)"
-__email__ = "CAON0001@e.ntu.edu.sg"
-
-
 def is_valid_move(graph, bounded_row, bounded_col):
     """Check to see if the intended location is valid for the robot to move to."""
     row, col = bounded_row + 1, bounded_col + 1
@@ -92,9 +88,6 @@ def find_fastest_path(graph, start_point=(1, 1), goal_point=(18, 13), before_sta
 def get_shortest_path_moves(robot, start, goal, before_start_point=None, is_give_up=False):
     """
     Calculate the list of moves needed to make given a list of coordinates.
-
-    :author: Harold Lim Jie Yu (U1621635L)
-    :email: HARO0002@e.ntu.edu.sg
 
     :param robot: The robot currently in the maze.
     :param start: The start position

@@ -3,10 +3,6 @@ from time import sleep
 
 """This module drains a fully-charged battery to the level of power at which the robot runs most optimally."""
 
-__author__ = 'Harold Lim Jie Yu (1621635L)'
-__email__ = 'HARO0002@e.ntu.edu.sg'
-
-
 if __name__ == '__main__':
     to_send = 'n' * 137
     run_times = 12
