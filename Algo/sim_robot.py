@@ -17,10 +17,14 @@ class Robot:
         self._sensors = [
             {"mount_loc": SWS, "facing": WEST, "range": 2, "blind_spot": 0},
             {"mount_loc": NWS, "facing": WEST, "range": 2, "blind_spot": 0},
-            {"mount_loc": NWS, "facing": NORTH, "range": 3, "blind_spot": 0},
-            {"mount_loc": NS, "facing": NORTH, "range": 3, "blind_spot": 0},
-            {"mount_loc": NES, "facing": NORTH, "range": 3, "blind_spot": 0},
-            {"mount_loc": NES, "facing": EAST, "range": 4, "blind_spot": 0}
+            # {"mount_loc": NWS, "facing": NORTH, "range": 3, "blind_spot": 0},
+            # {"mount_loc": NS, "facing": NORTH, "range": 3, "blind_spot": 0},
+            # {"mount_loc": NES, "facing": NORTH, "range": 3, "blind_spot": 0},
+            # {"mount_loc": NES, "facing": EAST, "range": 4, "blind_spot": 0}
+            {"mount_loc": NWS, "facing": NORTH, "range": 2, "blind_spot": 0},
+            {"mount_loc": NS, "facing": NORTH, "range": 2, "blind_spot": 0},
+            {"mount_loc": NES, "facing": NORTH, "range": 2, "blind_spot": 0},
+            {"mount_loc": NES, "facing": EAST, "range": 2, "blind_spot": 0}
         ]
 
     def _mark_explored(self, y_or_cell, x=None):
