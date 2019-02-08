@@ -22,6 +22,9 @@ def get_grid_index(y, x):
 
 def get_robot_cells(cell):
     """ Calculate and return the list of indexes of the cells that the robot currently covered. """
+    # 0, 1, 2
+    # 3, r, 4
+    # 5, 6, 7
     cells = [cell + ROW_LENGTH - 1, cell + ROW_LENGTH, cell + ROW_LENGTH + 1,
              cell - 1, cell, cell + 1,
              cell - (ROW_LENGTH + 1), cell - ROW_LENGTH, cell - (ROW_LENGTH - 1)]

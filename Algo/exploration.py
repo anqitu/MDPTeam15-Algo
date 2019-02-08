@@ -63,14 +63,12 @@ class Exploration:
         :return: True when exploration is complete and the robot is back in the start zone.
         """
         yield self._robot.mark_robot_standing()  # Mark initial robot space explored
-        # print('self._robot.mark_robot_standing(): ' + str(self._robot.mark_robot_standing()))
 
         is_back_at_start = False
         while True:
             try:
                 while not is_back_at_start:
                     updated_cells = self._robot.get_sensor_readings()
-                    print('updated_cells: ' + str(updated_cells))
                     yield updated_cells
 
                     if self._robot.check_free(LEFT) and not \
@@ -78,6 +76,7 @@ class Exploration:
                         updated_cells = self._robot.move_robot(LEFT)
                         yield LEFT, MOVE, updated_cells
                     elif self._robot.check_free(FORWARD):
+                        print('Forward Free')
                         updated_cells = self._robot.move_robot(FORWARD)
                         yield FORWARD, MOVE, updated_cells
                     else:
@@ -85,7 +84,6 @@ class Exploration:
                             print('self._robot.in_efficiency_limit(): ' + str(True))
 
                             if self._robot.check_free(LEFT):
-                                # print('self._robot.check_free(LEFT): ' + str(True))
 
                                 updated_cells = self._robot.move_robot(LEFT)
                                 yield LEFT, MOVE, updated_cells
@@ -130,6 +128,7 @@ class Exploration:
                     try:
                         nearest_unexplored_y, nearest_unexplored_x = self._get_nearest_unexplored()
                         center_y, center_x = get_matrix_coords(self._robot.center)
+                        print('nearest_unexplored_y, nearest_unexplored_x: {}'.format((nearest_unexplored_y, nearest_unexplored_x)))
 
                         moves = get_shortest_path_moves(self._robot,
                                                         (center_y, center_x),

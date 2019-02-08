@@ -78,6 +78,8 @@ def find_fastest_path(graph, start_point=(1, 1), goal_point=(18, 13), before_sta
     while (trace_r, trace_c) != bounded_start_point:
         results.append((trace_r + 1, trace_c + 1))
         try:
+            # print('Before: {}'.format(before))
+            # print('trace_r, trace_c: {}'.format((trace_r, trace_c)))
             (trace_r, trace_c) = before[trace_r][trace_c]
         except TypeError:
             return False

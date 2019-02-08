@@ -142,34 +142,50 @@ class Robot:
         true_bearing = (self.facing + direction) % 4
 
         robot_cells = get_robot_cells(self.center)
+        print('Cells: {}'.format(robot_cells))
+        print('Facing: {}'.format(self.facing))
+        print('Direction: {}'.format(direction))
+        print('Map: {}'.format(self.discovered_map))
 
         try:
             if true_bearing == NORTH:
                 y, x = get_matrix_coords(robot_cells[0])
                 y += 1
+                print(y, x)
                 if y < 0 or x < 0:
                     raise IndexError
+                print('North: ' + str(not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
+                            or self.discovered_map[y][x + 2] == 1)))
                 return not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
                             or self.discovered_map[y][x + 2] == 1)
             elif true_bearing == EAST:
                 y, x = get_matrix_coords(robot_cells[2])
                 x += 1
+                print(y, x)
                 if y < 2 or x < 0:
                     raise IndexError
+                print('East: ' + str(not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
+                            or self.discovered_map[y - 2][x] == 1)))
                 return not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
                             or self.discovered_map[y - 2][x] == 1)
             elif true_bearing == SOUTH:
                 y, x = get_matrix_coords(robot_cells[6])
                 y -= 1
+                print(y, x)
                 if y < 0 or x < 0:
                     raise IndexError
+                print('South: ' + str(not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
+                            or self.discovered_map[y][x + 2] == 1)))
                 return not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
                             or self.discovered_map[y][x + 2] == 1)
             elif true_bearing == WEST:
                 y, x = get_matrix_coords(robot_cells[0])
                 x -= 1
+                print(y, x)
                 if y < 2 or x < 0:
                     raise IndexError
+                print('West: ' + str(not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
+                            or self.discovered_map[y - 2][x] == 1)))
                 return not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
                             or self.discovered_map[y - 2][x] == 1)
         except IndexError:
@@ -242,7 +258,11 @@ class Robot:
 
     def get_explore_string(self):
         """ Build and return the MDF string of the exploration status at the time of calling this function. """
-        exploration_status = self.exploration_status[:]
+        # exploration_status = self.exploration_status[:]
+
+        # Start (Anqi)
+        exploration_status = self.exploration_status
+        # End (Anqi)
 
         explore_str = ''.join(str(grid) for row in exploration_status for grid in row)
 
@@ -255,15 +275,19 @@ class Robot:
         """ Build and return the MDF string of the robot's internal map at the time of calling this function. """
         discovered_map = self.discovered_map[:]
 
+        # map_str = ''.join(str(grid) for row in discovered_map for grid in row if grid != 2)
+        # pad_length = (8 - ((len(map_str) + 4) % 8)) % 8
+
+        # Start (Anqi)
+        print(discovered_map)
         map_str = ''.join(str(grid) for row in discovered_map for grid in row if grid != 2)
+        pad_length = (4 - ((len(map_str) + 4) % 4)) % 4
+        # End (Anqi)
 
-        pad_length = (8 - ((len(map_str) + 4) % 8)) % 8
         pad = '0' * pad_length
-
         map_string = '1111%s%s' % (map_str, pad)
         map_string = str(hex(int(map_string, 2)))
-
         map_string = map_string[3:]
-        map_string += '0'
+        # map_string += '0'
 
         return map_string
