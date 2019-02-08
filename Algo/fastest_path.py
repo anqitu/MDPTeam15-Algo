@@ -100,10 +100,10 @@ def get_shortest_path_moves(robot, start, goal, before_start_point=None, is_give
     """
     limited_map = []
     if is_give_up:
-        for row in robot.discovered_map:
+        for row in robot.discovered_map[::-1]:
             limited_map.append([1 if x == 2 else x for x in row])
     else:
-        limited_map = robot.discovered_map
+        limited_map = robot.discovered_map[::-1]
 
     if limited_map[start[0]][start[1]]:
         return False

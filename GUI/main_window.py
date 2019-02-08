@@ -305,7 +305,7 @@ class Window(Frame):
                     self._update_cells(updated_cells)
 
                     direction, move_or_turn, updated_cells = run.send(0)
-                    print(direction, move_or_turn, updated_cells)
+                    print('direction, move_or_turn, updated_cells: {}'.format((direction, move_or_turn, updated_cells)))
 
                     sleep(timestep)
                     self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
@@ -326,8 +326,8 @@ class Window(Frame):
                         # End (Anqi)
                         break
 
-                    is_looped = run.send(0)
-                    if is_looped:
+                    is_back_at_start = run.send(0)
+                    if is_back_at_start:
                         while True:
                             updated_or_moved, value, is_complete = run.send(0)
                             sleep(timestep)
@@ -340,6 +340,11 @@ class Window(Frame):
                                 break
 
                             if is_complete:
+                                # Start (Anqi)
+                                print('EXPLORE_STR:', self._robot.get_explore_string())
+                                print('MAP_STR:', self._robot.get_map_string())
+                                print('MAP_STR:', str(self._robot.discovered_map))
+                                # End (Anqi)
                                 break
                         break
 
