@@ -72,9 +72,21 @@ class Exploration:
                     updated_cells = self._robot.get_sensor_readings()
                     yield updated_cells
 
-                    # if self._robot.check_free(LEFT) and not \
-                            # self._robot.in_efficiency_limit():
-                    if self._robot.check_free(LEFT):
+                    print('Check Free Function')
+                    print('Cells: {}'.format(get_robot_cells(self._robot.center)))
+                    print('Facing: {}'.format(self._robot.facing))
+
+                    print('Exploration Status Map: :')
+                    for _ in self._robot.exploration_status:
+                        print(_)
+
+                    print('Discovered Map: :')
+                    for _ in self._robot.discovered_map:
+                        print(_)
+
+                    if self._robot.check_free(LEFT) and not \
+                            self._robot.in_efficiency_limit():
+                    # if self._robot.check_free(LEFT):
                         updated_cells = self._robot.move_robot(LEFT)
                         print('LEFT Free')
                         yield LEFT, MOVE, updated_cells
@@ -83,36 +95,36 @@ class Exploration:
                         updated_cells = self._robot.move_robot(FORWARD)
                         yield FORWARD, MOVE, updated_cells
                     else:
-                        # if self._robot.in_efficiency_limit():
-                        #     print('self._robot.in_efficiency_limit(): ' + str(True))
-                        #
-                        #     if self._robot.check_free(LEFT):
-                        #
-                        #         updated_cells = self._robot.move_robot(LEFT)
-                        #         yield LEFT, MOVE, updated_cells
-                        #         yield self._robot.is_complete(self._exploration_limit, self._start_time,
-                        #                                       self._time_limit)
-                        #         if self._robot.is_complete(self._exploration_limit, self._start_time,
-                        #                                    self._time_limit):
-                        #             raise ExploreComplete
-                        #
-                        #         if self._robot.center == START:
-                        #             is_back_at_start = True
-                        #         yield is_back_at_start
-                        #         if is_back_at_start:
-                        #             break
-                        #         updated_cells = self._robot.get_sensor_readings()
-                        #         yield updated_cells
-                        #         self._robot.turn_robot(BACKWARD)
-                        #         yield BACKWARD, TURN, {}
-                        #
-                        #     # Start (Add by Anqi)
-                        #     else:
-                        #         self._robot.turn_robot(RIGHT)
-                        #         yield RIGHT, TURN, {}
-                        #     # End (Add by Anqi)
-                        #
-                        # else:
+                        if self._robot.in_efficiency_limit():
+                            print('self._robot.in_efficiency_limit(): ' + str(True))
+
+                            if self._robot.check_free(LEFT):
+
+                                updated_cells = self._robot.move_robot(LEFT)
+                                yield LEFT, MOVE, updated_cells
+                                yield self._robot.is_complete(self._exploration_limit, self._start_time,
+                                                              self._time_limit)
+                                if self._robot.is_complete(self._exploration_limit, self._start_time,
+                                                           self._time_limit):
+                                    raise ExploreComplete
+
+                                if self._robot.center == START:
+                                    is_back_at_start = True
+                                yield is_back_at_start
+                                if is_back_at_start:
+                                    break
+                                updated_cells = self._robot.get_sensor_readings()
+                                yield updated_cells
+                                self._robot.turn_robot(BACKWARD)
+                                yield BACKWARD, TURN, {}
+
+                            # Start (Add by Anqi)
+                            else:
+                                self._robot.turn_robot(RIGHT)
+                                yield RIGHT, TURN, {}
+                            # End (Add by Anqi)
+
+                        else:
                             self._robot.turn_robot(RIGHT)
                             yield RIGHT, TURN, {}
 
@@ -136,6 +148,7 @@ class Exploration:
                         moves = get_shortest_path_moves(self._robot,
                                                         (center_y, center_x),
                                                         (nearest_unexplored_y, nearest_unexplored_x))
+                        print('Moves to nearest unexplored: {}'.format(moves))
 
                         if not moves:  # Check adjacent cells
                             adjacent_cells = get_robot_cells(get_grid_index(nearest_unexplored_y, nearest_unexplored_x))

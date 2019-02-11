@@ -15,8 +15,8 @@ class Robot:
         self.discovered_map = discovered_map
         self.real_map = real_map
         self._sensors = [
-            {"mount_loc": SWS, "facing": WEST, "range": 2, "blind_spot": 0},
             {"mount_loc": NWS, "facing": WEST, "range": 2, "blind_spot": 0},
+            {"mount_loc": WS, "facing": WEST, "range": 2, "blind_spot": 0},
             {"mount_loc": NWS, "facing": NORTH, "range": 4, "blind_spot": 0},
             {"mount_loc": NS, "facing": NORTH, "range": 2, "blind_spot": 0},
             {"mount_loc": NES, "facing": NORTH, "range": 2, "blind_spot": 0},
@@ -142,21 +142,12 @@ class Robot:
         :param direction: he direction to check (FORWARD, LEFT, RIGHT, BACKWARD)
         :return: true if the robot is able to take one step in that direction, false otherwise
         """
-        true_bearing = (self.facing + direction) % 4
 
-        robot_cells = get_robot_cells(self.center)
-        print('Check Free Function')
-        print('Cells: {}'.format(robot_cells))
-        print('Facing: {}'.format(self.facing))
+        print('Check Free......')
         print('Direction: {}'.format(direction))
 
-        print('Exploration Status Map: :')
-        for _ in self.exploration_status:
-            print(_)
-
-        print('Discovered Map: :')
-        for _ in self.discovered_map:
-            print(_)
+        true_bearing = (self.facing + direction) % 4
+        robot_cells = get_robot_cells(self.center)
 
         try:
             if true_bearing == NORTH:

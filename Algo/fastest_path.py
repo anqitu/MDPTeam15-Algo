@@ -111,7 +111,12 @@ def get_shortest_path_moves(robot, start, goal, before_start_point=None, is_give
     cells = find_fastest_path(graph=limited_map, start_point=start, goal_point=goal,
                               before_start_point=before_start_point)
 
+    print('=' * 50)
+    print('Cells for find_fastest_path')
+    print(cells)
+
     prev_cell = (start[0], start[1])
+    print('prev_cell: {}'.format(prev_cell))
 
     move_list = []
 
@@ -122,7 +127,9 @@ def get_shortest_path_moves(robot, start, goal, before_start_point=None, is_give
         return False
 
     for cell in cells:
+
         y_diff = cell[0] - prev_cell[0]
+        print('y_diff: {}'.format(y_diff))
 
         if y_diff == -1:
             abs_dir = SOUTH
@@ -130,10 +137,15 @@ def get_shortest_path_moves(robot, start, goal, before_start_point=None, is_give
             abs_dir = NORTH
         elif y_diff == 0:
             x_diff = cell[1] - prev_cell[1]
+            print('x_diff: {}'.format(x_diff))
             if x_diff == -1:
                 abs_dir = WEST
             elif x_diff == 1:
                 abs_dir = EAST
+            # Start (Anqi)
+            elif x_diff == 0:
+                abs_dir = potential_facing
+            # End (Anqi)
 
         to_move = abs_dir - potential_facing
 

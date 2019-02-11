@@ -302,6 +302,7 @@ class Window(Frame):
                 # Exploration until completion
                 while True:
                     updated_cells = run.send(0)
+                    print('updated_cells: {}'.format(updated_cells))
                     self._update_cells(updated_cells)
 
                     direction, move_or_turn, updated_cells = run.send(0)

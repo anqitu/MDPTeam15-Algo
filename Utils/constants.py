@@ -64,14 +64,11 @@ BORDERS = {NORTH: range(TOP_LEFT_CORNER, TOP_RIGHT_CORNER + 1),
            EAST: range(BOTTOM_RIGHT_CORNER, TOP_RIGHT_CORNER + 1, ROW_LENGTH),
            WEST: range(BOTTOM_LEFT_CORNER, TOP_LEFT_CORNER + 1, ROW_LENGTH)}
 
+
 # Efficient movement limits                               Limits of the grid if robot is to move efficiently ?
 E_LIMITS = {
-    # Start (Anqi)
-    NORTH: range(TOP_LEFT_LIMIT - ROW_LENGTH, TOP_RIGHT_LIMIT - ROW_LENGTH - 1),            # (17, 1) to (17, 14)
-    SOUTH: range(BOTTOM_LEFT_LIMIT + ROW_LENGTH, BOTTOM_RIGHT_LIMIT + ROW_LENGTH - 1),      # (2, 1) to (2, 14)
-    # End (Anqi)
-    # NORTH: range(TOP_LEFT_LIMIT - ROW_LENGTH, TOP_RIGHT_LIMIT - ROW_LENGTH + 1),            # (17, 1) to (17, 14)
-    # SOUTH: range(BOTTOM_LEFT_LIMIT + ROW_LENGTH, BOTTOM_RIGHT_LIMIT + ROW_LENGTH + 1),      # (2, 1) to (2, 14)
+    NORTH: range(TOP_LEFT_LIMIT - ROW_LENGTH, TOP_RIGHT_LIMIT - ROW_LENGTH + 1),            # (17, 1) to (17, 13)
+    SOUTH: range(BOTTOM_LEFT_LIMIT + ROW_LENGTH, BOTTOM_RIGHT_LIMIT + ROW_LENGTH + 1),      # (2, 1) to (2, 13)
     EAST: range(BOTTOM_RIGHT_LIMIT - 1, TOP_RIGHT_LIMIT - 1 + 1, ROW_LENGTH),               # (1, 12) to (18, 12)
     WEST: range(BOTTOM_LEFT_LIMIT + 1, TOP_LEFT_LIMIT + 1 + 1, ROW_LENGTH)}                 # (1, 2) to (18, 2)
 
