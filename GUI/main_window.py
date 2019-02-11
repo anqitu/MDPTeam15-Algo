@@ -302,11 +302,10 @@ class Window(Frame):
                 # Exploration until completion
                 while True:
                     updated_cells = run.send(0)
-                    print('updated_cells: {}'.format(updated_cells))
                     self._update_cells(updated_cells)
 
                     direction, move_or_turn, updated_cells = run.send(0)
-                    print('direction, move_or_turn, updated_cells: {}'.format((direction, move_or_turn, updated_cells)))
+                    print('direction, move_or_turn, updated_cells (robot standing): {}'.format((MOVEMENTS[direction], MOVE_TURN[move_or_turn], updated_cells)))
 
                     sleep(timestep)
                     self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
@@ -323,12 +322,30 @@ class Window(Frame):
                         # Start (Anqi)
                         print('EXPLORE_STR:', self._robot.get_explore_string())
                         print('MAP_STR:', self._robot.get_map_string())
-                        print('MAP_STR:', str(self._robot.discovered_map))
+                        print('Exploration Status Map: :')
+                        for _ in self._robot.exploration_status:
+                            print(_)
+                        print('Discovered Map: :')
+                        for _ in self._robot.discovered_map:
+                            print(_)
                         # End (Anqi)
                         break
 
                     is_back_at_start = run.send(0)
                     if is_back_at_start:
+
+                        # Start (Anqi)
+                        print('EXPLORE_STR:', self._robot.get_explore_string())
+                        print('MAP_STR:', self._robot.get_map_string())
+                        print('Exploration Status Map: :')
+                        for _ in self._robot.exploration_status:
+                            print(_)
+                        print('Discovered Map: :')
+                        for _ in self._robot.discovered_map:
+                            print(_)
+                        # End (Anqi)
+
+                        # Move to unexplored area
                         while True:
                             updated_or_moved, value, is_complete = run.send(0)
                             sleep(timestep)
@@ -338,13 +355,29 @@ class Window(Frame):
                             elif updated_or_moved == "moved":
                                 self._move_robot(value)
                             else:
+                                # invalid (no path find)
+                                # Start (Anqi)
+                                print('EXPLORE_STR:', self._robot.get_explore_string())
+                                print('MAP_STR:', self._robot.get_map_string())
+                                print('Exploration Status Map: :')
+                                for _ in self._robot.exploration_status:
+                                    print(_)
+                                print('Discovered Map: :')
+                                for _ in self._robot.discovered_map:
+                                    print(_)
+                                # End (Anqi)
                                 break
 
                             if is_complete:
                                 # Start (Anqi)
                                 print('EXPLORE_STR:', self._robot.get_explore_string())
                                 print('MAP_STR:', self._robot.get_map_string())
-                                print('MAP_STR:', str(self._robot.discovered_map))
+                                print('Exploration Status Map: :')
+                                for _ in self._robot.exploration_status:
+                                    print(_)
+                                print('Discovered Map: :')
+                                for _ in self._robot.discovered_map:
+                                    print(_)
                                 # End (Anqi)
                                 break
                         break

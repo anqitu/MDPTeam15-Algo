@@ -144,7 +144,7 @@ class Robot:
         """
 
         print('Check Free......')
-        print('Direction: {}'.format(direction))
+        print('Direction: {}'.format(MOVEMENTS[direction]))
 
         true_bearing = (self.facing + direction) % 4
         robot_cells = get_robot_cells(self.center)
@@ -258,8 +258,6 @@ class Robot:
             except IndexError:
                 continue
 
-        print('get_sensor_readings - updated_cells: {}'.format(updated_cells))
-
         return updated_cells
 
     def get_explore_string(self):
@@ -267,7 +265,10 @@ class Robot:
         # exploration_status = self.exploration_status[:]
 
         # Start (Anqi)
+        print('Exploration Status Map: :')
         exploration_status = self.exploration_status[::-1]
+        for _ in exploration_status:
+            print(_)
         # End (Anqi)
 
         explore_str = ''.join(str(grid) for row in exploration_status for grid in row)
@@ -285,7 +286,9 @@ class Robot:
         # pad_length = (8 - ((len(map_str) + 4) % 8)) % 8
 
         # Start (Anqi)
-        print(discovered_map)
+        print('Discovered Map: :')
+        for _ in discovered_map:
+            print(_)
         map_str = ''.join(str(grid) for row in discovered_map[::-1] for grid in row if grid != 2)
         pad_length = (4 - ((len(map_str) + 4) % 4)) % 4
         # End (Anqi)

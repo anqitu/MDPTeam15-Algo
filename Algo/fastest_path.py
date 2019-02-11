@@ -27,7 +27,6 @@ def turning_cost(before_point, current_point, next_point):
         else:
             return 3
 
-
 def find_fastest_path(graph, start_point=(1, 1), goal_point=(18, 13), before_start_point=None):
     """Calculate the fastest path from a starting position to a goal position."""
     bounded_start_point = (start_point[0] - 1, start_point[1] - 1)
@@ -112,11 +111,13 @@ def get_shortest_path_moves(robot, start, goal, before_start_point=None, is_give
                               before_start_point=before_start_point)
 
     print('=' * 50)
-    print('Cells for find_fastest_path')
-    print(cells)
+    print('Fast Path from {} to {}: '.format(start, goal))
+    if not cells:
+        print('WARNING: No Path Found!')
+    else:
+        print(cells)
 
     prev_cell = (start[0], start[1])
-    print('prev_cell: {}'.format(prev_cell))
 
     move_list = []
 

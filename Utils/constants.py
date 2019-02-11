@@ -6,11 +6,23 @@ EAST = 1
 SOUTH = 2
 WEST = 3
 
+DIRECTIONS = {
+    0: 'NORTH',
+    1: 'EAST',
+    2: 'SOUTH',
+    3: 'WEST'}
+
 # Movement
 FORWARD = 0                                             # Move forward 1 square
 LEFT = -1                                               # Turn left and move forward 1 square
 RIGHT = 1                                               # Turn right and move forward 1 square
 BACKWARD = 2                                            # Turn behind and move forward 1 square
+
+MOVEMENTS = {
+    0: 'FORWARD',
+    -1: 'LEFT',
+    1: 'RIGHT',
+    2: 'BACKWARD'}
 
 # Map Constants                                         Order cells from left to right, bottom to top
 # 19  [286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 300]
@@ -43,6 +55,8 @@ GOAL = (COL_LENGTH * ROW_LENGTH) - ROW_LENGTH - 1       # Center of Goal area --
 # Communication Constants
 MOVE = 0
 TURN = 1
+
+MOVE_TURN = {0: 'MOVE', 1: 'TURN'}
 
 # Limit                                                  Outer limits of the grid for the robot center
 TOP_LEFT_LIMIT = (COL_LENGTH * ROW_LENGTH) - (2 * ROW_LENGTH) + 2               # 272 (18, 1)

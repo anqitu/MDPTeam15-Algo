@@ -19,7 +19,6 @@ def get_grid_index(y, x):
 
     return (y * ROW_LENGTH) + x + 1
 
-
 def get_robot_cells(cell):
     """ Calculate and return the list of indexes of the cells that the robot currently covered. """
     # 0, 1, 2
@@ -30,7 +29,6 @@ def get_robot_cells(cell):
              cell - (ROW_LENGTH + 1), cell - ROW_LENGTH, cell - (ROW_LENGTH - 1)]
 
     return cells
-
 
 def previous_cell(cell, facing):
     """
