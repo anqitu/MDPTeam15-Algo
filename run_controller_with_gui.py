@@ -1,6 +1,6 @@
 from tkinter import *
 
-import GUI.gui as gui
+import Controllers.controller_with_gui as gui
 
 """This module starts an instance of the GUI application that simulates a run."""
 

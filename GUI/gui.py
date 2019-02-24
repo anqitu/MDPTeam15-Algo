@@ -25,7 +25,7 @@ class Window(Frame):
     This class is the main GUI window.
     """
 
-    _grid_size = 30                          # size of one grid square in pixels
+    _grid_size = 30                     # size of one grid square in pixels
 
     def __init__(self, master):
         """Initializes the GUI."""
@@ -91,11 +91,11 @@ class Window(Frame):
         self._draw_grid()
 
         # Draw robot
-        self._facing = EAST
+        self._facing = NORTH
         self._draw_robot(START, self._facing)
 
         self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
-                            facing=EAST,
+                            facing=NORTH,
                             discovered_map=[[2] * ROW_LENGTH for _ in range(COL_LENGTH)],
                             real_map=[[]])
 
@@ -322,7 +322,7 @@ class Window(Frame):
                         # Start (Anqi)
                         print('EXPLORE_STR:', self._robot.get_explore_string())
                         print('MAP_STR:', self._robot.get_map_string())
-                        print('Exploration Status Map: :')
+                        print('Exploration Status Map:')
                         for _ in self._robot.exploration_status:
                             print(_)
                         print('Discovered Map: :')
@@ -337,7 +337,7 @@ class Window(Frame):
                         # Start (Anqi)
                         print('EXPLORE_STR:', self._robot.get_explore_string())
                         print('MAP_STR:', self._robot.get_map_string())
-                        print('Exploration Status Map: :')
+                        print('Exploration Status Map:')
                         for _ in self._robot.exploration_status:
                             print(_)
                         print('Discovered Map: :')
@@ -359,7 +359,7 @@ class Window(Frame):
                                 # Start (Anqi)
                                 print('EXPLORE_STR:', self._robot.get_explore_string())
                                 print('MAP_STR:', self._robot.get_map_string())
-                                print('Exploration Status Map: :')
+                                print('Exploration Status Map:')
                                 for _ in self._robot.exploration_status:
                                     print(_)
                                 print('Discovered Map: :')
@@ -372,7 +372,7 @@ class Window(Frame):
                                 # Start (Anqi)
                                 print('EXPLORE_STR:', self._robot.get_explore_string())
                                 print('MAP_STR:', self._robot.get_map_string())
-                                print('Exploration Status Map: :')
+                                print('Exploration Status Map:')
                                 for _ in self._robot.exploration_status:
                                     print(_)
                                 print('Discovered Map: :')

@@ -1,12 +1,16 @@
-import re
+from tkinter import *
 from tkinter.filedialog import askopenfilename
-import threading
-from ast import literal_eval
+import re
 from time import time, sleep
 
+from Utils.utils import *
 from Algo.exploration import Exploration
 from Algo.fastest_path import *
-from Connections.connection_client import Sender
+from Utils.constants import *
+
+import threading
+from ast import literal_eval
+from Connections.connection_client import Message_Handler
 
 """This module defines the controller that sends messages to the Android."""
 
@@ -14,13 +18,12 @@ class Controller:
     """
     This class is the controller that relays messages to the Android.
     """
-    def __init__(self, sim):
+    def __init__(self):
         """
         Initialize the Controller class.
-
-        :param sim: Whether or not the current instance is going to be for a simulated or real run.
         """
-        self._is_sim = sim
+        self._is_sim = IS_SIMULATE_MODE
+        self._is_gui = IS_GUI
 
         if self._is_sim:
             print('sim run')
@@ -35,9 +38,15 @@ class Controller:
                         break
                     elif ans.lower() == 'n':
                         exit()
+
+            # self._timestep = 0.1
             self._timestep = float(input("Timestep: ").strip())
-            self._explore_limit = float(input("Coverage Limit: ").strip())
-            self._time_limit = float(input("Time Limit: ").strip())
+            self._explore_limit = 100
+            # self._explore_limit = float(input("Coverage Limit: ").strip())
+            # self._time_limit = float(input("Time Limit: ").strip())
+            self._time_limit = 100
+            # self._time_limit = 100
+
             disable_print()
             from Algo.sim_robot import Robot
             self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
@@ -45,63 +54,66 @@ class Controller:
                                 discovered_map=[[2] * ROW_LENGTH for _ in range(COL_LENGTH)],
                                 real_map=[[]])
         else:
-            print('real run')
+            print('Real run')
+            import tkinter as tk
+            root = tk.Tk()
+            root.withdraw()
+
             self._explore_limit = 100.0
             self._time_limit = 720
             from Algo.real_robot import Robot
             self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
                                 facing=NORTH,
                                 discovered_map=[[2] * ROW_LENGTH for _ in range(COL_LENGTH)])
-        self._sender = Sender(self._msg_handler)
+
+        # Initialize connention client thread
+        self._sender = Message_Handler(self._receive_handler)
         self._auto_update = True
         enable_print()
-        print('init complete!')
+        print('Init complete!')
+        self._sender.send_rpi("Hello from PC to RPi\n")
+        self._sender.send_arduino("Hello from PC to Arduino\n")
+        self._sender.send_android("Hello from PC to Android\n")
         disable_print()
-        try:
-            import winsound
-            frequency = 2500
-            duration = 250
-            winsound.Beep(frequency, duration)
-            winsound.Beep(frequency, duration)
-        except ImportError:
-            enable_print()
-            print('beep')
-            disable_print()
 
-    def _msg_handler(self, msg):
+    def _receive_handler(self, msg):
         """
         Parse and handle messages from the Android device.
 
         :param msg: The message received from the Android device.
         :return: N/A
         """
-        if msg == "ca":
+        if msg == ANDROID_CALIBRATE:
             thread = threading.Thread(target=self._calibrate)
             thread.daemon = True
             thread.start()
-        elif msg == "be":
+            print('Start CALIBRATION')
+        elif msg == ANDROID_EXPLORE:
             thread = threading.Thread(target=self._explore)
             thread.daemon = True
             thread.start()
-        elif msg == "au":
+            print('Start EXPLORATION')
+        elif msg == ANDROID_AUTO_UPDATE_TRUE:
             self._auto_update = True
-        elif msg == "mu":
+        elif msg == ANDROID_AUTO_UPDATE_FALSE:
             self._auto_update = False
             self._update_android(True, True, override=True)
-        elif msg[0:8] == "waypoint":
-            self._set_way_point(msg[9:])
-        elif msg == "bf":
+        elif msg[0:8] == ANDROID_WAYPOINT:
+            self._set_way_point(msg[8:])
+        elif msg == ANDROID_MOVE_FAST_PATH:
             thread = threading.Thread(target=self._move_fastest_path)
             thread.daemon = True
             thread.start()
-        elif msg == "f":
-            self._sender.send_arduino('w')
-        elif msg == "tl":
-            self._sender.send_arduino('a')
-        elif msg == "tr":
-            self._sender.send_arduino('d')
-        elif msg == "o":
-            self._sender.send_arduino('g')
+        elif msg == ANDROID_FORWARD:
+            self._sender.send_arduino(ARDUINO_FORWARD)
+        elif msg == ANDROID_TURN_LEFT:
+            self._sender.send_arduino(ARDUINO_TURN_LEFT)
+        elif msg == ANDROID_TURN_RIGHT:
+            self._sender.send_arduino(ARDUINO_TURN_RIGHT)
+        elif msg == ANDROID_BACK:
+            self._sender.send_arduino(ARDUINO_BACKWARD)
+        elif msg == ANDROID_SENSOR:
+            self._sender.send_arduino(ARDUINO_SENSOR)
 
     def _load_map(self):
         """
@@ -148,12 +160,11 @@ class Controller:
         """
         Set the waypoint coordinates.
 
-        :author: Cao Ngoc Thai (U1620058E)
-        :email: CAON0001@e.ntu.edu.sg
-
         :param coordinate: The coordinates received from the Android device.
         :return: N/A
         """
+        enable_print()
+        print('Set Waypoint: {}'.format(coordinate))
         (col, row) = literal_eval(coordinate)
         self._way_point = (row, col)
 
@@ -180,8 +191,7 @@ class Controller:
 
         :return: N/A
         """
-        self._sender.send_android('{"exploreMap":"%s"}' % self._robot.get_explore_string())
-        self._sender.send_android('{"obstacleMap":"%s"}' % self._robot.get_map_string())
+        self._sender.send_android('{"exploreMap":"%s","obstacleMap":"%s"}' % (self._robot.get_explore_string(), self._robot.get_map_string()))
 
     def _update_coords_android(self):
         """
@@ -213,6 +223,8 @@ class Controller:
 
         :return: N/A
         """
+        enable_print()
+
         start_time = time()
         if self._is_sim:
             self._robot.real_map = self._grid_map
@@ -223,28 +235,51 @@ class Controller:
         else:
             run = exploration.start_real(self._sender)
 
-        next(run)
+        next(run) # Robot Standing
         self._update_android(True, True)
         while True:
             try:
                 # Exploration until completion
-
                 while True:
-                    run.send(0)
+                    run.send(0) # empty updated_cells
                     self._update_android(True, True)
 
-                    run.send(0)
+                    run.send(0) # robot movement
                     if self._is_sim:
                         sleep(self._timestep)
 
                     self._update_android(True, True)
 
-                    is_complete = run.send(0)
+                    is_complete = run.send(0) # is_complete
                     if is_complete:
+
+                        # Start (Anqi)
+                        print('EXPLORE_STR:', self._robot.get_explore_string())
+                        print('MAP_STR:', self._robot.get_map_string())
+                        print('Exploration Status Map:')
+                        for _ in self._robot.exploration_status:
+                            print(_)
+                        print('Discovered Map: :')
+                        for _ in self._robot.discovered_map:
+                            print(_)
+                        # End (Anqi)
+
                         break
 
-                    is_looped = run.send(0)
-                    if is_looped:
+                    is_back_at_start = run.send(0) # is_back_to_start
+                    if is_back_at_start:
+
+                        # Start (Anqi)
+                        print('EXPLORE_STR:', self._robot.get_explore_string())
+                        print('MAP_STR:', self._robot.get_map_string())
+                        print('Exploration Status Map:')
+                        for _ in self._robot.exploration_status:
+                            print(_)
+                        print('Discovered Map: :')
+                        for _ in self._robot.discovered_map:
+                            print(_)
+                        # End (Anqi)
+
                         while True:
                             updated_or_moved, value, is_complete = run.send(0)
                             if self._is_sim:
@@ -252,9 +287,32 @@ class Controller:
                             if updated_or_moved == "updated" or updated_or_moved == "moved":
                                 self._update_android(True, True)
                             else:
+                                # invalid (no path find)
+                                # Start (Anqi)
+                                print('EXPLORE_STR:', self._robot.get_explore_string())
+                                print('MAP_STR:', self._robot.get_map_string())
+                                print('Exploration Status Map:')
+                                for _ in self._robot.exploration_status:
+                                    print(_)
+                                print('Discovered Map: :')
+                                for _ in self._robot.discovered_map:
+                                    print(_)
+                                # End (Anqi)
+
                                 break
 
                             if is_complete:
+                                # Start (Anqi)
+                                print('EXPLORE_STR:', self._robot.get_explore_string())
+                                print('MAP_STR:', self._robot.get_map_string())
+                                print('Exploration Status Map:')
+                                for _ in self._robot.exploration_status:
+                                    print(_)
+                                print('Discovered Map: :')
+                                for _ in self._robot.discovered_map:
+                                    print(_)
+                                # End (Anqi)
+
                                 break
                         break
 
@@ -266,6 +324,7 @@ class Controller:
 
                     self._update_android(True, True)
 
+            # Raised by an iterator’s next() method to signal that there are no further values.
             except StopIteration:
                 if not self._is_sim:
                     enable_print()

@@ -1,5 +1,18 @@
 """ This module defines all the constants that are used throughout the program. """
 
+# IS_DEBUG_MODE = False # Disable printing to console
+IS_DEBUG_MODE = True # enable console printout at the cost of a slower run
+IS_ARROW_SCAN = False # scan for arrows during exploration
+IS_SIMULATE_MODE = True # Whether or not the current instance is going to be for a simulated or real run.
+IS_GUI = True # Whether or not show the GUI
+
+# Sockets
+# HOST = '192.168.15.15'
+WIFI_HOST = '127.0.0.1'
+RPI_PORT = 5555
+ARDUINO_PORT = 5556
+ANDROID_PORT = 5557
+
 # Directions
 NORTH = 0
 EAST = 1
@@ -110,13 +123,22 @@ GOAL_AREA = "#08AE69"
 PATH = "#7ACDC8"
 WAY_POINT = "#673AB7"
 
-# Disable printing to console
-# DEBUG_MODE = False
-DEBUG_MODE = True
-ARROW_SCAN = False
+# Messages from Andoird
+ANDROID_CALIBRATE = 'ca'
+ANDROID_EXPLORE = 'ex'
+ANDROID_AUTO_UPDATE_TRUE = 'au'
+ANDROID_AUTO_UPDATE_FALSE = 'mu'
+ANDROID_WAYPOINT = 'waypoint'
+ANDROID_MOVE_FAST_PATH = 'fp'
+ANDROID_FORWARD = 'fo'
+ANDROID_TURN_LEFT = 'tl'
+ANDROID_TURN_RIGHT = 'tr'
+ANDROID_BACK = 'ba'
+ANDROID_SENSOR = 'se'
 
-# Sockets
-HOST = '192.168.14.14'
-ARDUINO_PORT = 5560
-ANDROID_PORT = 6560
-RPI_PORT = 7560
+# Messages to Arduino
+ARDUINO_SENSOR = 'se'
+ARDUINO_FORWARD = 'w'
+ARDUINO_TURN_LEFT = 'a'
+ARDUINO_TURN_RIGHT = 'd'
+ARDUINO_BACKWARD = 'dd'

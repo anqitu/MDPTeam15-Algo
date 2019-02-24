@@ -24,15 +24,19 @@ class Robot:
         self._probability_map = [[[0.0, 0.0] for _ in range(ROW_LENGTH)] for _ in range(COL_LENGTH)]
         self._arrow_map = [[[0, 0, 0, 0] for _ in range(ROW_LENGTH)] for _ in range(COL_LENGTH)]
         self._sensors = [
-            {"mount_loc": SWS, "facing": WEST, "range": 2, "blind_spot": 0},
+            #   2 3 4
+            # 1       5
+            # 0
+            #
+            {"mount_loc": WS, "facing": WEST, "range": 2, "blind_spot": 0},
             {"mount_loc": NWS, "facing": WEST, "range": 2, "blind_spot": 0},
-            {"mount_loc": NWS, "facing": NORTH, "range": 2, "blind_spot": 0},
+            {"mount_loc": NWS, "facing": NORTH, "range": 4, "blind_spot": 0},
             {"mount_loc": NS, "facing": NORTH, "range": 2, "blind_spot": 0},
             {"mount_loc": NES, "facing": NORTH, "range": 2, "blind_spot": 0},
             {"mount_loc": NES, "facing": EAST, "range": 4, "blind_spot": 0}
         ]
 
-        self.num_sensor_readings = 11
+        self.num_sensor_readings = 1
         regex_str = '^(\d,){%s}$' % (len(self._sensors) * self.num_sensor_readings)
         self._readings_regex = re.compile(regex_str)
 
@@ -49,7 +53,7 @@ class Robot:
         :return: Nothing if the cell is marked 100% non-obstacle. The new value of the cell otherwise.
         """
         y, x = get_matrix_coords(cell)
-        print(y, x, count, total)
+        print(x, y, count, total)
 
         if self._probability_map[y][x][0] == 1.0 and self._probability_map[y][x][1] == 0.0:
             print('perm')
@@ -106,7 +110,7 @@ class Robot:
         """
         opposite = (facing + 2) % 4
 
-        self._arrow_map[y][x][facing] = 1
+        # self._arrow_map[y][x][facing] = 1
         self._arrow_map[y][x][opposite] = 1
 
         return True
@@ -149,7 +153,7 @@ class Robot:
 
         :return: The percentage of the map the robot has explored.
         """
-        count = 0.0
+        count = 0
         for row in self.exploration_status:
             for i in row:
                 count += i
@@ -165,8 +169,7 @@ class Robot:
         :param time_limit: The maximum time that the robot was allowed to explore until.
         :return: True if the exploration should be stopped, false otherwise.
         """
-        completion = self.get_completion_percentage
-        return completion() >= explore_limit \
+        return self.get_completion_percentage() >= explore_limit \
             or float(time() - start_time >= time_limit)
 
     def turn_robot(self, sender, direction):
@@ -193,7 +196,7 @@ class Robot:
 
         sender.wait_arduino('M')
 
-        if ARROW_SCAN:
+        if IS_ARROW_SCAN:
             self.check_arrow(sender)
 
     def move_robot(self, sender, direction):
@@ -223,7 +226,7 @@ class Robot:
 
         sender.wait_arduino('M')
 
-        if ARROW_SCAN:
+        if IS_ARROW_SCAN:
             self.check_arrow(sender)
 
         return updated_cells
@@ -235,37 +238,54 @@ class Robot:
         :param direction: The direction to check (FORWARD, LEFT, RIGHT, BACKWARD)
         :return: True if the robot is able to take one step in that direction, false otherwise
         """
-        true_bearing = (self.facing + direction) % 4
 
+        enable_print()
+
+        print('Check Free......')
+        print('Direction: {}'.format(MOVEMENTS[direction]))
+
+        true_bearing = (self.facing + direction) % 4
         robot_cells = get_robot_cells(self.center)
 
         try:
             if true_bearing == NORTH:
                 y, x = get_matrix_coords(robot_cells[0])
                 y += 1
+                print('Cell to check : {}'.format((y, x)))
                 if y < 0 or x < 0:
                     raise IndexError
+                print('North: ' + str(not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
+                            or self.discovered_map[y][x + 2] == 1)))
                 return not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
                             or self.discovered_map[y][x + 2] == 1)
             elif true_bearing == EAST:
                 y, x = get_matrix_coords(robot_cells[2])
                 x += 1
+                print('Cell to check : {}'.format((y, x)))
                 if y < 2 or x < 0:
                     raise IndexError
+                print('East: ' + str(not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
+                            or self.discovered_map[y - 2][x] == 1)))
                 return not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
                             or self.discovered_map[y - 2][x] == 1)
             elif true_bearing == SOUTH:
                 y, x = get_matrix_coords(robot_cells[6])
                 y -= 1
+                print('Cell to check : {}'.format((y, x)))
                 if y < 0 or x < 0:
                     raise IndexError
+                print('South: ' + str(not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
+                            or self.discovered_map[y][x + 2] == 1)))
                 return not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
                             or self.discovered_map[y][x + 2] == 1)
             elif true_bearing == WEST:
                 y, x = get_matrix_coords(robot_cells[0])
                 x -= 1
+                print('Cell to check : {}'.format((y, x)))
                 if y < 2 or x < 0:
                     raise IndexError
+                print('West: ' + str(not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
+                            or self.discovered_map[y - 2][x] == 1)))
                 return not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
                             or self.discovered_map[y - 2][x] == 1)
         except IndexError:
@@ -273,6 +293,8 @@ class Robot:
 
     def is_arrow_possible(self):
         """
+        # Camera put on the east of the robot
+
         Check if it is possible to have arrows in the chosen direction.
 
         The method also takes into consideration obstacles that have already been scanned for arrows. Will only return
@@ -287,6 +309,7 @@ class Robot:
         facing = self.facing
 
         try:
+            # distance = [2 cells]
             for distance in range(2, arrow_range + 2):
                 if facing == NORTH:
                     new_x = x - distance
@@ -387,7 +410,7 @@ class Robot:
         """
         mark_probability = self._mark_probability
 
-        sender.send_arduino('g')
+        sender.send_arduino(ARDUINO_SENSOR)
         readings = sender.wait_arduino(self._readings_regex, is_regex=True)
         readings = readings.split(',')
         del readings[-1]
@@ -465,13 +488,18 @@ class Robot:
                 except IndexError:
                     break
             print('br')
-
-        print(updated_cells)
         return updated_cells
 
     def get_explore_string(self):
         """ Build and return the MDF string of the exploration status at the time of calling this function. """
         exploration_status = self.exploration_status[:]
+
+        # # Start (Anqi)
+        # print('Exploration Status Map:')
+        # exploration_status = self.exploration_status[:]
+        # for _ in exploration_status[::-1]:
+        #     print(_)
+        # # End (Anqi)
 
         explore_str = ''.join(str(grid) for row in exploration_status for grid in row)
 
@@ -484,15 +512,22 @@ class Robot:
         """ Build and return the MDF string of the robot's internal map at the time of calling this function. """
         discovered_map = self.discovered_map[:]
 
+        # map_str = ''.join(str(grid) for row in discovered_map for grid in row if grid != 2)
+        # pad_length = (8 - ((len(map_str) + 4) % 8)) % 8
+
+        # Start (Anqi)
+        # print('Discovered Map:')
+        # for _ in discovered_map[::-1]:
+        #     print(_)
+
         map_str = ''.join(str(grid) for row in discovered_map for grid in row if grid != 2)
+        pad_length = (4 - ((len(map_str) + 4) % 4)) % 4
+        # End (Anqi)
 
-        pad_length = (8 - ((len(map_str) + 4) % 8)) % 8
         pad = '0' * pad_length
-
         map_string = '1111%s%s' % (map_str, pad)
         map_string = str(hex(int(map_string, 2)))
-
         map_string = map_string[3:]
-        map_string += '0'
+        # map_string += '0'
 
         return map_string

@@ -1,81 +1,34 @@
-def double_number(number):
-    while True:
-        yield 1
-        yield 2
-        yield 3
-
-c = double_number(2)
-next(c)
-c.send(0)
-c.send(None)
-c.send(10)
-
-discovered_map = [
- [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
- [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
- [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
- [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-
-map = [[0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-       [0, 0, 0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-       [0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-       [0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2],
-       [0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2],
-       [0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2],
-       [0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2],
-       [0, 0, 0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-       [0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-       [0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2],
-       [0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2],
-       [0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2],
-       [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2],
-       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2],
-       [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 2, 2],
-       [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 2, 2],
-       [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 2, 2],
-       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2],
-       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2],
-       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]]
-
-map[19-19]
 from Utils.utils import *
-get_matrix_coords(300)
-
-y = 19
-x = 14
-(y * ROW_LENGTH) + x + 1
-
-file = open('Maps/map.txt', mode="r")
-map_str = file.read()
 import re
+num_sensor_readings = 11
+regex_str = '^(\d,){%s}$' % (66)
+_readings_regex = re.compile(regex_str)
+'{"exploreMap":"{}","obstacleMap":"{}"}'.format('ff', '00')
+'{"exploreMap":"%s","obstacleMap":"%s"}' % ('ff', '00')
+import json
+json.loads('{"exploreMap":"%s","obstacleMap":"%s"}' % ('ff', '11'))
 
-match = re.fullmatch("[01\n]*", map_str)
+data = 'P{"status":"explore done"}P{"status":"explore done"}'.split('P')
+data[:] = [x for x in data if x != '']
 
-grid_map = []
-row_strings = map_str.split("\n")
-for row_string in row_strings:
-    grid_row = []
-    for char in row_string:
-        bit = int(char)
-        grid_row.append(bit)
-    grid_map.append(grid_row)
+a = [1]
+a.extend(data)
+json.loads(a[1])
 
-return True
+str.encode('kill', "UTF-8")
 
-return False
+from ast import literal_eval
+(col, row) = literal_eval('waypoint1,3'[8:])
+
+facing = 0
+opposite = (facing + 2) % 4
+arrow_map = [[[0, 0, 0, 0] for _ in range(ROW_LENGTH)] for _ in range(COL_LENGTH)]
+arrow_map[0][0][0]=1
+arrow_map[0][0][2]=1
+
+
+readings = [int(x) for x in [1,1,1,1,1,1,2,2,2,2,2,2]]
+# split readings list into len(sensors)-sized chunks
+readings = [readings[i:i + 6] for i in range(0, len(readings), 6)]
+
+list(range(0, len(readings), 6))

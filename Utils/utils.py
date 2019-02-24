@@ -55,13 +55,13 @@ def previous_cell(cell, facing):
 def get_arduino_cmd(direction):
     """ Return the appropriate command to send to the Arduino for it to turn or move in a certain direction. """
     if direction == FORWARD:
-        return 'w'
+        return ARDUINO_FORWARD
     if direction == LEFT:
-        return 'a'
+        return ARDUINO_TURN_LEFT
     if direction == BACKWARD:
-        return 'dd'
+        return ARDUINO_BACK
     if direction == RIGHT:
-        return 'd'
+        return ARDUINO_TURN_RIGHT
 
 
 def get_fastest_path_move_string(fastest_path, for_exploration=False):
@@ -85,11 +85,46 @@ def get_fastest_path_move_string(fastest_path, for_exploration=False):
 
 def disable_print():
     """ Suppress output from the print() function by piping stdout to /dev/null. """
-    if not DEBUG_MODE:
+    if not IS_DEBUG_MODE:
         sys.stdout = open(os.devnull, 'w')
 
 
 def enable_print():
     """ Allow output from the print() function by piping stdout back to the console. """
-    if not DEBUG_MODE:
+    if not IS_DEBUG_MODE:
         sys.stdout = sys.__stdout__
+
+# explore_string = 'fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3'
+def convert_explore_string_to_map(explore_string):
+    # Trim '0b' and padding sequences of ‘11’ at the beginning and end.
+    explore_string = bin(int(explore_string, 16))[4:-2]
+    # Convert string to list of list
+    # Reverse the row direction to from top to bottom
+    explore_map = [[int(j) for j in explore_string[i:i+15]] for i in range(0, len(explore_string), 15)][::-1]
+    return explore_map
+
+# obstacle_string = '000000000400000001c800000000000700000000800000001f8000070000000002000000000'
+def convert_obstacle_string_to_map(obstacle_string, explore_map):
+    explored_map_count = sum([sum(row) for row in explore_map])
+    # Trim '0b' and padding sequences of ‘1111’ at the beginning.
+    # Trim the padding '0' at the end to match to the count of explored cells according to explored_map_count
+    obstacle_string = bin(int('f' + obstacle_string, 16))[6:][:explored_map_count]
+
+    # Initialize discovered map as all undiscovered (represented by 2)
+    discovered_string = [2 for _ in range(ROW_LENGTH * COL_LENGTH)]
+
+    # Convert explore map from list to string. (Inverse direction to match obstacle string, which is from bottom to up)
+    explore_string = [item for sublist in explore_map[::-1] for item in sublist]
+
+    # Fill 0 or 1 for explored cell
+    obstacle_string_index = 0
+    for i in range(len(explore_string)):
+        if explore_string[i] == 1:
+            discovered_string[i] = obstacle_string[obstacle_string_index]
+        obstacle_string_index += 1
+
+    # Convert string to list of list
+    # Reverse the row direction to from top to bottom
+    discovered_map = [[int(j) for j in discovered_string[i:i+15]] for i in range(0, len(discovered_string), 15)][::-1]
+
+    return discovered_map
