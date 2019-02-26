@@ -5,7 +5,7 @@ from time import time, sleep
 
 from Utils.utils import *
 from Algo.exploration import Exploration
-import Algo.fastest_path as fp
+from Algo.fastest_path import *
 from Utils.constants import *
 from Algo.sim_robot import Robot
 
@@ -32,9 +32,12 @@ class Window(Frame):
         Frame.__init__(self, master)
 
         self._master = master
-        print("init window starting")
+
+        enable_print()
+        print("Init window starting")
         self._init_window()
-        print("init window completed")
+        print("Init window completed")
+        disable_print()
 
     def _init_window(self):
         """
@@ -90,14 +93,100 @@ class Window(Frame):
         # Draw grid
         self._draw_grid()
 
-        # Draw robot
-        self._facing = NORTH
-        self._draw_robot(START, self._facing)
-
         self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
                             facing=NORTH,
                             discovered_map=[[2] * ROW_LENGTH for _ in range(COL_LENGTH)],
                             real_map=[[]])
+
+        # Draw robot
+        self._facing = self._robot.facing
+        self._draw_robot(START, self._facing)
+
+    def _explore(self):
+        """Start the exploration."""
+        start_time = time()
+        time_limit = float(self._time_limit_entry.get().strip())
+        timestep = float(self._timestep_entry.get().strip())
+        self._robot.real_map = self._grid_map
+        exploration = Exploration(self._robot, start_time, float(self._explore_entry.get().strip()), time_limit)
+        run = exploration.start()
+        initial_pos = next(run)
+        self._update_cells(initial_pos)
+        while True:
+            try:
+                # Exploration until completion
+                while True:
+                    print('-' * 50)
+
+                    updated_cells = run.send(0)
+                    print('updated_cells (sensor_readings): {}'.format(updated_cells)) # sensor_reading
+
+                    self._update_cells(updated_cells)
+
+                    print_map_info(self._robot)
+
+                    direction, move_or_turn, updated_cells = run.send(0)
+                    print('direction, move_or_turn, updated_cells (robot standing): {}'.format((MOVEMENTS[direction], MOVE_TURN[move_or_turn], updated_cells)))
+
+                    sleep(timestep)
+                    self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
+                    self._update_cells(updated_cells)
+
+                    if move_or_turn == MOVE:
+                        self._move_robot(direction)
+                    elif move_or_turn == TURN:
+                        self._turn_head(self._facing, direction)
+
+                    is_complete = run.send(0)
+                    if is_complete:
+                        enable_print()
+                        print_map_info(self._robot)
+                        disable_print()
+                        break
+
+                    is_back_at_start = run.send(0)
+                    if is_back_at_start:
+
+                        enable_print()
+                        print('Back to start......')
+                        print_map_info(self._robot)
+                        disable_print()
+
+                        # Move to unexplored area
+                        while True:
+                            updated_or_moved, value, is_complete = run.send(0)
+                            sleep(timestep)
+                            self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
+
+                            print_map_info(self._robot)
+
+                            if updated_or_moved == "updated":
+                                self._update_cells(value)
+                            elif updated_or_moved == "moved":
+                                self._move_robot(value)
+                            else:
+                                # invalid (no path find)
+                                break
+
+                            if is_complete:
+                                enable_print()
+                                print_map_info(self._robot)
+                                disable_print()
+                                break
+                        break
+
+                # Returning to start after completion
+                enable_print()
+                print("Returning to Start...")
+                disable_print()
+
+                while True:
+                    direction = run.send(0)
+                    sleep(timestep)
+                    self._move_robot(direction)
+
+            except StopIteration:
+                break
 
     def _draw_grid(self):
         """Draw the virtual maze."""
@@ -287,109 +376,6 @@ class Window(Frame):
         self._canvas.move(self._head, 0, self._grid_size)
         self.update()
 
-    def _explore(self):
-        """Start the exploration."""
-        start_time = time()
-        time_limit = float(self._time_limit_entry.get().strip())
-        timestep = float(self._timestep_entry.get().strip())
-        self._robot.real_map = self._grid_map
-        exploration = Exploration(self._robot, start_time, float(self._explore_entry.get().strip()), time_limit)
-        run = exploration.start()
-        initial_pos = next(run)
-        self._update_cells(initial_pos)
-        while True:
-            try:
-                # Exploration until completion
-                while True:
-                    updated_cells = run.send(0)
-                    self._update_cells(updated_cells)
-
-                    direction, move_or_turn, updated_cells = run.send(0)
-                    print('direction, move_or_turn, updated_cells (robot standing): {}'.format((MOVEMENTS[direction], MOVE_TURN[move_or_turn], updated_cells)))
-
-                    sleep(timestep)
-                    self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
-                    self._update_cells(updated_cells)
-
-                    if move_or_turn == MOVE:
-                        self._move_robot(direction)
-                    elif move_or_turn == TURN:
-                        self._turn_head(self._facing, direction)
-
-                    is_complete = run.send(0)
-                    if is_complete:
-
-                        # Start (Anqi)
-                        print('EXPLORE_STR:', self._robot.get_explore_string())
-                        print('MAP_STR:', self._robot.get_map_string())
-                        print('Exploration Status Map:')
-                        for _ in self._robot.exploration_status:
-                            print(_)
-                        print('Discovered Map: :')
-                        for _ in self._robot.discovered_map:
-                            print(_)
-                        # End (Anqi)
-                        break
-
-                    is_back_at_start = run.send(0)
-                    if is_back_at_start:
-
-                        # Start (Anqi)
-                        print('EXPLORE_STR:', self._robot.get_explore_string())
-                        print('MAP_STR:', self._robot.get_map_string())
-                        print('Exploration Status Map:')
-                        for _ in self._robot.exploration_status:
-                            print(_)
-                        print('Discovered Map: :')
-                        for _ in self._robot.discovered_map:
-                            print(_)
-                        # End (Anqi)
-
-                        # Move to unexplored area
-                        while True:
-                            updated_or_moved, value, is_complete = run.send(0)
-                            sleep(timestep)
-                            self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
-                            if updated_or_moved == "updated":
-                                self._update_cells(value)
-                            elif updated_or_moved == "moved":
-                                self._move_robot(value)
-                            else:
-                                # invalid (no path find)
-                                # Start (Anqi)
-                                print('EXPLORE_STR:', self._robot.get_explore_string())
-                                print('MAP_STR:', self._robot.get_map_string())
-                                print('Exploration Status Map:')
-                                for _ in self._robot.exploration_status:
-                                    print(_)
-                                print('Discovered Map: :')
-                                for _ in self._robot.discovered_map:
-                                    print(_)
-                                # End (Anqi)
-                                break
-
-                            if is_complete:
-                                # Start (Anqi)
-                                print('EXPLORE_STR:', self._robot.get_explore_string())
-                                print('MAP_STR:', self._robot.get_map_string())
-                                print('Exploration Status Map:')
-                                for _ in self._robot.exploration_status:
-                                    print(_)
-                                print('Discovered Map: :')
-                                for _ in self._robot.discovered_map:
-                                    print(_)
-                                # End (Anqi)
-                                break
-                        break
-
-                # Returning to start after completion
-                while True:
-                    direction = run.send(0)
-                    sleep(timestep)
-                    self._move_robot(direction)
-
-            except StopIteration:
-                break
 
     def _update_cells(self, updated_cells):
         """Repaint the cells that have been updated."""
@@ -425,17 +411,6 @@ class Window(Frame):
         print("File %s does not exist" % filename)
         return False
 
-    def _move_fastest_path(self, fastest_path):
-        """Move the robot along the fastest path."""
-        timestep = float(self._timestep_entry.get().strip())
-        if fastest_path:
-            for move in fastest_path:
-                sleep(timestep)
-                self._robot.move_robot(move)
-                self._move_robot(move)
-        else:
-            print("No valid path")
-
     def _find_fastest_path(self):
         """Find the fastest path from the start to the goal zone."""
         for row in range(NUM_ROWS):
@@ -446,17 +421,28 @@ class Window(Frame):
                 except AttributeError:
                     continue
 
-        fastest_path_start_way_point = fp.get_shortest_path_moves(self._robot,
+        fastest_path_start_way_point = get_shortest_path_moves(self._robot,
                                                                   start=(1, 1),
                                                                   goal=self.way_point)
         self._move_fastest_path(fastest_path_start_way_point)
 
         before_way_point = previous_cell(self._robot.center, self._robot.facing)
-        fastest_path_way_point_goal = fp.get_shortest_path_moves(self._robot,
+        fastest_path_way_point_goal = get_shortest_path_moves(self._robot,
                                                                  start=self.way_point,
                                                                  goal=(18, 13),
                                                                  before_start_point=before_way_point)
         self._move_fastest_path(fastest_path_way_point_goal)
+
+    def _move_fastest_path(self, fastest_path):
+        """Move the robot along the fastest path."""
+        timestep = float(self._timestep_entry.get().strip())
+        if fastest_path:
+            for move in fastest_path:
+                sleep(timestep)
+                self._robot.move_robot(move)
+                self._move_robot(move)
+        else:
+            print("No valid path")
 
     def _mark_wall(self, grid_num):
         """

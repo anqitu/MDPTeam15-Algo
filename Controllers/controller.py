@@ -19,18 +19,21 @@ class Controller:
     This class is the controller that relays messages to the Android.
     """
     def __init__(self):
+        enable_print()
+
         """
         Initialize the Controller class.
         """
+
         self._is_sim = IS_SIMULATE_MODE
-        self._is_gui = IS_GUI
 
         if self._is_sim:
-            print('sim run')
+            print('Simulation run')
+            print('Loading Map......')
+
             import tkinter as tk
             root = tk.Tk()
             root.withdraw()
-            enable_print()
             while not self._load_map():
                 while True:
                     ans = input("Try again? (y/n) ").strip()
@@ -47,7 +50,6 @@ class Controller:
             self._time_limit = 100
             # self._time_limit = 100
 
-            disable_print()
             from Algo.sim_robot import Robot
             self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
                                 facing=NORTH,
@@ -55,9 +57,6 @@ class Controller:
                                 real_map=[[]])
         else:
             print('Real run')
-            import tkinter as tk
-            root = tk.Tk()
-            root.withdraw()
 
             self._explore_limit = 100.0
             self._time_limit = 720
@@ -69,7 +68,7 @@ class Controller:
         # Initialize connention client thread
         self._sender = Message_Handler(self._receive_handler)
         self._auto_update = True
-        enable_print()
+
         print('Init complete!')
         self._sender.send_rpi("Hello from PC to RPi\n")
         self._sender.send_arduino("Hello from PC to Arduino\n")
@@ -87,12 +86,16 @@ class Controller:
             thread = threading.Thread(target=self._calibrate)
             thread.daemon = True
             thread.start()
+            enable_print()
             print('Start CALIBRATION')
+            disable_print()
         elif msg == ANDROID_EXPLORE:
             thread = threading.Thread(target=self._explore)
             thread.daemon = True
             thread.start()
+            enable_print()
             print('Start EXPLORATION')
+            disable_print()
         elif msg == ANDROID_AUTO_UPDATE_TRUE:
             self._auto_update = True
         elif msg == ANDROID_AUTO_UPDATE_FALSE:
@@ -105,7 +108,7 @@ class Controller:
             thread.daemon = True
             thread.start()
         elif msg == ANDROID_FORWARD:
-            self._sender.send_arduino(ARDUINO_FORWARD)
+            self._sender.send_arduino(ARDUINO_MOVE_FORWARD)
         elif msg == ANDROID_TURN_LEFT:
             self._sender.send_arduino(ARDUINO_TURN_LEFT)
         elif msg == ANDROID_TURN_RIGHT:
@@ -115,46 +118,6 @@ class Controller:
         elif msg == ANDROID_SENSOR:
             self._sender.send_arduino(ARDUINO_SENSOR)
 
-    def _load_map(self):
-        """
-        Load a map descriptor text file.
-
-        :return: True if the file exists and is able to be successfully parsed, false otherwise.
-        """
-        filename = askopenfilename(title="Select Map Descriptor", filetypes=[("Text Files (*.txt)", "*.txt")])
-
-        if filename:
-            print(filename)
-            if self._parse_map(filename):
-                return True
-            print("File %s cannot be parsed" % filename)
-            return False
-        print("File %s does not exist" % filename)
-        return False
-
-    def _parse_map(self, filename):
-        """
-        Parse a map descriptor text file
-
-        :param filename: The name of the map descriptor file
-        :return: True if the file is able to be successfully parsed, false otherwise.
-        """
-        file = open(filename, mode="r")
-        map_str = file.read()
-
-        match = re.fullmatch("[01\n]*", map_str)
-        if match:
-            self._grid_map = []
-            row_strings = map_str.split("\n")
-            for row_string in row_strings:
-                grid_row = []
-                for char in row_string:
-                    bit = int(char)
-                    grid_row.append(bit)
-                self._grid_map.append(grid_row)
-            return True
-
-        return False
 
     def _set_way_point(self, coordinate):
         """
@@ -167,6 +130,7 @@ class Controller:
         print('Set Waypoint: {}'.format(coordinate))
         (col, row) = literal_eval(coordinate)
         self._way_point = (row, col)
+        disable_print()
 
     def _calibrate(self):
         """
@@ -241,8 +205,12 @@ class Controller:
             try:
                 # Exploration until completion
                 while True:
+                    print('-' * 50)
+
                     run.send(0) # empty updated_cells
                     self._update_android(True, True)
+
+                    print_map_info(self._robot)
 
                     run.send(0) # robot movement
                     if self._is_sim:
@@ -252,71 +220,42 @@ class Controller:
 
                     is_complete = run.send(0) # is_complete
                     if is_complete:
-
-                        # Start (Anqi)
-                        print('EXPLORE_STR:', self._robot.get_explore_string())
-                        print('MAP_STR:', self._robot.get_map_string())
-                        print('Exploration Status Map:')
-                        for _ in self._robot.exploration_status:
-                            print(_)
-                        print('Discovered Map: :')
-                        for _ in self._robot.discovered_map:
-                            print(_)
-                        # End (Anqi)
-
+                        enable_print()
+                        print_map_info(self._robot)
+                        disable_print()
                         break
 
                     is_back_at_start = run.send(0) # is_back_to_start
                     if is_back_at_start:
 
-                        # Start (Anqi)
-                        print('EXPLORE_STR:', self._robot.get_explore_string())
-                        print('MAP_STR:', self._robot.get_map_string())
-                        print('Exploration Status Map:')
-                        for _ in self._robot.exploration_status:
-                            print(_)
-                        print('Discovered Map: :')
-                        for _ in self._robot.discovered_map:
-                            print(_)
-                        # End (Anqi)
+                        enable_print()
+                        print('Back to start......')
+                        print_map_info(self._robot)
+                        disable_print()
 
                         while True:
                             updated_or_moved, value, is_complete = run.send(0)
+                            print_map_info(self._robot)
+
                             if self._is_sim:
                                 sleep(self._timestep)
                             if updated_or_moved == "updated" or updated_or_moved == "moved":
                                 self._update_android(True, True)
                             else:
                                 # invalid (no path find)
-                                # Start (Anqi)
-                                print('EXPLORE_STR:', self._robot.get_explore_string())
-                                print('MAP_STR:', self._robot.get_map_string())
-                                print('Exploration Status Map:')
-                                for _ in self._robot.exploration_status:
-                                    print(_)
-                                print('Discovered Map: :')
-                                for _ in self._robot.discovered_map:
-                                    print(_)
-                                # End (Anqi)
-
                                 break
 
                             if is_complete:
-                                # Start (Anqi)
-                                print('EXPLORE_STR:', self._robot.get_explore_string())
-                                print('MAP_STR:', self._robot.get_map_string())
-                                print('Exploration Status Map:')
-                                for _ in self._robot.exploration_status:
-                                    print(_)
-                                print('Discovered Map: :')
-                                for _ in self._robot.discovered_map:
-                                    print(_)
-                                # End (Anqi)
-
+                                enable_print()
+                                print_map_info(self._robot)
+                                disable_print()
                                 break
                         break
 
                 # Returning to start after completion
+                enable_print()
+                print("Returning to Start...")
+                disable_print()
                 while True:
                     run.send(0)
                     if self._is_sim:
@@ -327,11 +266,11 @@ class Controller:
             # Raised by an iterator’s next() method to signal that there are no further values.
             except StopIteration:
                 if not self._is_sim:
+                    # Adjust robot position to face to North
                     enable_print()
-                    print('EXPLORE_STR:', self._robot.get_explore_string())
-                    print('MAP_STR:', self._robot.get_map_string())
-                    disable_print()
+                    print_map_info(self._robot)
                     print('Returned to start!')
+
                     self._sender.send_arduino('j')
                     self._sender.wait_arduino('U')
                     if self._robot.facing == WEST:
@@ -357,10 +296,14 @@ class Controller:
                         sleep(0.05)
                         self._sender.send_arduino('x')
                         self._sender.wait_arduino('D')
+
+                    disable_print()
                 break
 
+        enable_print()
         print('Calibrating...')
         self._calibrate_after_exploration()
+        disable_print()
 
     def _calibrate_after_exploration(self):
         """
@@ -379,6 +322,10 @@ class Controller:
         self._update_android(True, True)
         self._sender.send_android('{"status":"explore done"}')
         self._sender.send_android('{"status":"calibrating done"}')
+
+        enable_print()
+        print('Calibrating Done!')
+        disable_print()
 
     def _find_fastest_path(self):
         """Calculate and return the set of moves required for the fastest path."""
@@ -408,14 +355,16 @@ class Controller:
     def _move_fastest_path(self):
         """Move along the fastest path to the goal zone."""
         if self._fastest_path:
+            move_str = get_fastest_path_move_string(self._fastest_path)
+            print('Move String: {}'.format(move_str))
+
             if self._is_sim:
                 for move in self._fastest_path:
-                    if self._is_sim:
-                        sleep(self._timestep)
-
+                    sleep(self._timestep)
                     self._robot.move_robot(move)
-                    self._update_android(True, True)
+                    self._update_android(False, True)
             else:
+                # 'nn/a/n/d/nnnnn'.split('/') = ['nn', 'a', 'n', 'd', 'nnnnn']
                 move_str = get_fastest_path_move_string(self._fastest_path)
                 moves = move_str.split('/')
                 for move in moves:
@@ -427,5 +376,51 @@ class Controller:
                     self._sender.send_arduino(move)
                     for i in range(move_len):
                         self._sender.wait_arduino('M')
+            enable_print()
+            print('GOAL Reached!')
+            disable_print()
         else:
+            enable_print()
             print("No valid path")
+            disable_print()
+
+    def _load_map(self):
+        """
+        Load a map descriptor text file.
+
+        :return: True if the file exists and is able to be successfully parsed, false otherwise.
+        """
+        filename = askopenfilename(title="Select Map Descriptor", filetypes=[("Text Files (*.txt)", "*.txt")])
+
+        if filename:
+            print(filename)
+            if self._parse_map(filename):
+                return True
+            print("File %s cannot be parsed" % filename)
+            return False
+        print("File %s does not exist" % filename)
+        return False
+
+    def _parse_map(self, filename):
+        """
+        Parse a map descriptor text file
+
+        :param filename: The name of the map descriptor file
+        :return: True if the file is able to be successfully parsed, false otherwise.
+        """
+        file = open(filename, mode="r")
+        map_str = file.read()
+
+        match = re.fullmatch("[01\n]*", map_str)
+        if match:
+            self._grid_map = []
+            row_strings = map_str.split("\n")
+            for row_string in row_strings:
+                grid_row = []
+                for char in row_string:
+                    bit = int(char)
+                    grid_row.append(bit)
+                self._grid_map.append(grid_row)
+            return True
+
+        return False

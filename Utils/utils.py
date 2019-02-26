@@ -59,26 +59,31 @@ def get_arduino_cmd(direction):
     if direction == LEFT:
         return ARDUINO_TURN_LEFT
     if direction == BACKWARD:
-        return ARDUINO_BACK
+        return ARDUINO_TURN_TO_BACKWARD
     if direction == RIGHT:
         return ARDUINO_TURN_RIGHT
 
+def convert_arduino_cmd_to_direction(cmd):
+    """ Return the appropriate command to send to the Arduino for it to turn or move in a certain direction. """
+    if cmd == ARDUINO_FORWARD:
+        return FORWARD
+    if cmd == ARDUINO_TURN_LEFT:
+        return LEFT
+    if cmd == ARDUINO_TURN_TO_BACKWARD:
+        return BACKWARD
+    if cmd == ARDUINO_TURN_RIGHT:
+        return RIGHT
 
-def get_fastest_path_move_string(fastest_path, for_exploration=False):
+def get_fastest_path_move_string(fastest_path):
     """ Calculate and return the list of moves the robot has to make given a path. """
     move_str = ''
     for move in fastest_path:
         if move == RIGHT or move == BACKWARD or move == LEFT:
-            move_str += '/'
+            # move_str += '/'
             move_str += get_arduino_cmd(move)
-            move_str += '/'
+            # move_str += '/'
 
-        if for_exploration:
-            move_str += get_arduino_cmd(FORWARD)
-        else:
-            move_str += 'n'
-
-    print(move_str)
+        move_str += 'n'
 
     return move_str
 
@@ -128,3 +133,13 @@ def convert_obstacle_string_to_map(obstacle_string, explore_map):
     discovered_map = [[int(j) for j in discovered_string[i:i+15]] for i in range(0, len(discovered_string), 15)][::-1]
 
     return discovered_map
+
+def print_map_info(robot):
+    print('EXPLORE_STR:', robot.get_explore_string())
+    print('MAP_STR:', robot.get_map_string())
+    print('Exploration Status Map:')
+    for _ in robot.exploration_status[::-1]:
+        print(_)
+    print('Discovered Map:')
+    for _ in robot.discovered_map[::-1]:
+        print(_)

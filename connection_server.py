@@ -1,5 +1,5 @@
 import socket
-from Utils.constants import *
+from Utils.utils import *
 import time
 import threading
 
@@ -15,9 +15,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
         def recv():
             while True:
-                 data = conn.recv(1024)
-                 data = data.decode()
-                 print('Received a message from PC: {}'.format(data))
+                data = conn.recv(1024)
+                data = data.decode()
+                if data:
+                    print('Received a message from PC: {}'.format(data))
 
         threading.Thread(target=recv).start()
 

@@ -36,8 +36,7 @@ class Robot:
             {"mount_loc": NES, "facing": EAST, "range": 4, "blind_spot": 0}
         ]
 
-        self.num_sensor_readings = 1
-        regex_str = '^(\d,){%s}$' % (len(self._sensors) * self.num_sensor_readings)
+        regex_str = '^(\d,){%s}$' % (len(self._sensors) * NUM_SENSOR_READINGS)
         self._readings_regex = re.compile(regex_str)
 
     def _mark_probability(self, cell, count, total):
@@ -53,11 +52,11 @@ class Robot:
         :return: Nothing if the cell is marked 100% non-obstacle. The new value of the cell otherwise.
         """
         y, x = get_matrix_coords(cell)
-        print(x, y, count, total)
+        print('Current Sesnsor Reading: x, y, count, total: {}'.format((x, y, count, total)))
 
         if self._probability_map[y][x][0] == 1.0 and self._probability_map[y][x][1] == 0.0:
             print('perm')
-            return
+            return None, None
 
         # Update counts
         self._probability_map[y][x][0] += count
@@ -65,18 +64,18 @@ class Robot:
 
         prob_obstacle = self._probability_map[y][x][0]
         prob_total = self._probability_map[y][x][1]
+        value = int(prob_obstacle / prob_total > 0.5)
 
-        print(y, x, prob_obstacle, prob_total)
+        print('Cumulative Sesnsor Reading: x, y, prob_obstacle, prob_total: {}'.format((x, y, prob_obstacle, prob_total)))
 
         if not self.exploration_status[y][x]:
             self.exploration_status[y][x] = 1
 
-        if prob_obstacle / prob_total > 0.5:
-            self.discovered_map[y][x] = 1
-            return 1
-        else:
-            self.discovered_map[y][x] = 0
-            return 0
+        if self.discovered_map[y][x] != value:
+            self.discovered_map[y][x] = value
+            return get_grid_index(y, x), int(prob_obstacle / prob_total > 0.5)
+
+        return None, None
 
     def _mark_permanent(self, cell):
         """
@@ -140,9 +139,8 @@ class Robot:
         """
         robot_cells = get_robot_cells(self.center)
         updated_cells = {}
-        mark_permanent = self._mark_permanent
         for cell in robot_cells:
-            if mark_permanent(cell):
+            if self._mark_permanent(cell):
                 updated_cells[cell] = 0
 
         return updated_cells
@@ -183,13 +181,6 @@ class Robot:
 
         if direction == FORWARD:
             return
-
-        if direction == BACKWARD:
-            sender.send_arduino(get_arduino_cmd(RIGHT))
-            self.facing = (self.facing + RIGHT) % 4
-            direction = RIGHT
-            sender.wait_arduino('M')
-            sleep(0.05)
 
         sender.send_arduino(get_arduino_cmd(direction))
         self.facing = (self.facing + direction) % 4
@@ -235,11 +226,9 @@ class Robot:
         """
         Check if the adjacent cells in the chosen direction have obstacles.
 
-        :param direction: The direction to check (FORWARD, LEFT, RIGHT, BACKWARD)
-        :return: True if the robot is able to take one step in that direction, false otherwise
+        :param direction: he direction to check (FORWARD, LEFT, RIGHT, BACKWARD)
+        :return: true if the robot is able to take one step in that direction, false otherwise
         """
-
-        enable_print()
 
         print('Check Free......')
         print('Direction: {}'.format(MOVEMENTS[direction]))
@@ -251,43 +240,43 @@ class Robot:
             if true_bearing == NORTH:
                 y, x = get_matrix_coords(robot_cells[0])
                 y += 1
-                print('Cell to check : {}'.format((y, x)))
+                print('Cell to check : {}'.format((x, y, x+1, y, x+2, y)))
                 if y < 0 or x < 0:
                     raise IndexError
-                print('North: ' + str(not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
-                            or self.discovered_map[y][x + 2] == 1)))
-                return not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
+                is_free = not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
                             or self.discovered_map[y][x + 2] == 1)
+                print('North: ' + str(is_free))
+                return is_free
             elif true_bearing == EAST:
                 y, x = get_matrix_coords(robot_cells[2])
                 x += 1
-                print('Cell to check : {}'.format((y, x)))
+                print('Cell to check : {}'.format((x, y, x, y-1, x, y-2)))
                 if y < 2 or x < 0:
                     raise IndexError
-                print('East: ' + str(not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
-                            or self.discovered_map[y - 2][x] == 1)))
-                return not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
+                is_free = not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
                             or self.discovered_map[y - 2][x] == 1)
+                print('East: ' + str(is_free))
+                return is_free
             elif true_bearing == SOUTH:
                 y, x = get_matrix_coords(robot_cells[6])
                 y -= 1
-                print('Cell to check : {}'.format((y, x)))
+                print('Cell to check : {}'.format((x, y, x+1, y, x+2, y)))
                 if y < 0 or x < 0:
                     raise IndexError
-                print('South: ' + str(not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
-                            or self.discovered_map[y][x + 2] == 1)))
-                return not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
+                is_free = not (self.discovered_map[y][x] == 1 or self.discovered_map[y][x + 1] == 1
                             or self.discovered_map[y][x + 2] == 1)
+                print('South: ' + str(is_free))
+                return is_free
             elif true_bearing == WEST:
                 y, x = get_matrix_coords(robot_cells[0])
                 x -= 1
-                print('Cell to check : {}'.format((y, x)))
+                print('Cell to check : {}'.format((x, y, x, y-1, y-2, x)))
                 if y < 2 or x < 0:
                     raise IndexError
-                print('West: ' + str(not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
-                            or self.discovered_map[y - 2][x] == 1)))
-                return not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
+                is_free = not (self.discovered_map[y][x] == 1 or self.discovered_map[y - 1][x] == 1
                             or self.discovered_map[y - 2][x] == 1)
+                print('West: ' + str(is_free))
+                return is_free
         except IndexError:
             return False
 
@@ -408,8 +397,6 @@ class Robot:
         :param sender: The object that communicates with the RPi
         :return: The updated cell values and indexes.
         """
-        mark_probability = self._mark_probability
-
         sender.send_arduino(ARDUINO_SENSOR)
         readings = sender.wait_arduino(self._readings_regex, is_regex=True)
         readings = readings.split(',')
@@ -463,6 +450,7 @@ class Robot:
             print('Sensor', sensor_index(sensor))
 
             weight = 4
+            # [1, 2] or [1, 2, 3, 4]
             for cell in read_range:
                 try:
                     if true_facing == NORTH:
@@ -480,7 +468,11 @@ class Robot:
 
                     cell_index = get_grid_index(to_explore[0], to_explore[1])
 
-                    if mark_probability(cell_index, weight * reading.count(cell), weight * self.num_sensor_readings):
+                    updated_cell, value = self._mark_probability(cell_index, weight * reading.count(cell), weight * NUM_SENSOR_READINGS)
+                    if updated_cell is not None:
+                        updated_cells[updated_cell] = value
+
+                    if self.discovered_map[to_explore[0]][to_explore[1]] == 1:
                         raise IndexError
 
                     weight /= 2
@@ -493,41 +485,18 @@ class Robot:
     def get_explore_string(self):
         """ Build and return the MDF string of the exploration status at the time of calling this function. """
         exploration_status = self.exploration_status[:]
-
-        # # Start (Anqi)
-        # print('Exploration Status Map:')
-        # exploration_status = self.exploration_status[:]
-        # for _ in exploration_status[::-1]:
-        #     print(_)
-        # # End (Anqi)
-
         explore_str = ''.join(str(grid) for row in exploration_status for grid in row)
-
         explore_status_string = '11%s11' % explore_str
         explore_status_string = str(hex(int(explore_status_string, 2)))
-
         return explore_status_string[2:]
 
     def get_map_string(self):
         """ Build and return the MDF string of the robot's internal map at the time of calling this function. """
         discovered_map = self.discovered_map[:]
-
-        # map_str = ''.join(str(grid) for row in discovered_map for grid in row if grid != 2)
-        # pad_length = (8 - ((len(map_str) + 4) % 8)) % 8
-
-        # Start (Anqi)
-        # print('Discovered Map:')
-        # for _ in discovered_map[::-1]:
-        #     print(_)
-
         map_str = ''.join(str(grid) for row in discovered_map for grid in row if grid != 2)
         pad_length = (4 - ((len(map_str) + 4) % 4)) % 4
-        # End (Anqi)
-
         pad = '0' * pad_length
         map_string = '1111%s%s' % (map_str, pad)
         map_string = str(hex(int(map_string, 2)))
         map_string = map_string[3:]
-        # map_string += '0'
-
         return map_string

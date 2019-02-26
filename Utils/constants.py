@@ -1,17 +1,14 @@
 """ This module defines all the constants that are used throughout the program. """
 
-# IS_DEBUG_MODE = False # Disable printing to console
 IS_DEBUG_MODE = True # enable console printout at the cost of a slower run
 IS_ARROW_SCAN = False # scan for arrows during exploration
-IS_SIMULATE_MODE = True # Whether or not the current instance is going to be for a simulated or real run.
-IS_GUI = True # Whether or not show the GUI
+IS_SIMULATE_MODE = False # Whether or not the current instance is going to be for a simulated or real run.
+NUM_SENSOR_READINGS = 1
 
 # Sockets
 # HOST = '192.168.15.15'
 WIFI_HOST = '127.0.0.1'
 RPI_PORT = 5555
-ARDUINO_PORT = 5556
-ANDROID_PORT = 5557
 
 # Directions
 NORTH = 0
@@ -25,7 +22,7 @@ DIRECTIONS = {
     2: 'SOUTH',
     3: 'WEST'}
 
-# Movement
+# Robot Direction
 FORWARD = 0                                             # Move forward 1 square
 LEFT = -1                                               # Turn left and move forward 1 square
 RIGHT = 1                                               # Turn right and move forward 1 square
@@ -124,21 +121,66 @@ PATH = "#7ACDC8"
 WAY_POINT = "#673AB7"
 
 # Messages from Andoird
+ANDROID_WAYPOINT = 'waypoint'
 ANDROID_CALIBRATE = 'ca'
 ANDROID_EXPLORE = 'ex'
+ANDROID_MOVE_FAST_PATH = 'fp'
+ANDROID_RESET = 're'
+ANDROID_LOAD_EXPLORE_MAP = 'lo'
 ANDROID_AUTO_UPDATE_TRUE = 'au'
 ANDROID_AUTO_UPDATE_FALSE = 'mu'
-ANDROID_WAYPOINT = 'waypoint'
-ANDROID_MOVE_FAST_PATH = 'fp'
 ANDROID_FORWARD = 'fo'
 ANDROID_TURN_LEFT = 'tl'
 ANDROID_TURN_RIGHT = 'tr'
-ANDROID_BACK = 'ba'
-ANDROID_SENSOR = 'se'
+ANDROID_TURN_TO_BACKWARD = 'ba'
 
 # Messages to Arduino
-ARDUINO_SENSOR = 'se'
+ARDUINO_SENSOR = 'r'
 ARDUINO_FORWARD = 'w'
 ARDUINO_TURN_LEFT = 'a'
 ARDUINO_TURN_RIGHT = 'd'
-ARDUINO_BACKWARD = 'dd'
+ARDUINO_TURN_TO_BACKWARD = 's'
+
+EXPLORE_STATUS_MAP = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]][::-1]
+
+EXPLORATION_OBSTACLE_MAP_1 = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+                              [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]][::-1]
+
+EXPLORATION_OBSTACLE_MAP = EXPLORATION_OBSTACLE_MAP_1

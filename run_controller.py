@@ -1,5 +1,3 @@
-import argparse
-
 from Controllers.controller import Controller
 from Utils.utils import *
 

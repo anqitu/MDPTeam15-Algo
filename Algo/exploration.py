@@ -1,30 +1,6 @@
 from Algo.fastest_path import *
 
 """This module defines the Exploration class that handles the exploration algorithm, along with Exceptions used."""
-
-class ExploreComplete(Exception):
-    """
-    This exception is raised when exploration is complete.
-    """
-    def __init__(self, message="Exploration complete!"):
-        print(message)
-
-
-class CellsUpdated(Exception):
-    """
-    This exception is raised when there has been an update in the robot's internal map
-    """
-    pass
-
-
-class PathNotFound(Exception):
-    """
-    This exception is raised when a path to the location cannot be found.
-    """
-    def __init__(self):
-        print("Valid path not found!")
-
-
 class Exploration:
     """
     This class defines and handles the exploration algorithm.
@@ -46,7 +22,7 @@ class Exploration:
         nearest = (-1, -1)
         for i in range(NUM_ROWS):
             for j in range(NUM_COLS):
-                if self._robot.discovered_map[::-1][i][j] == 2:
+                if self._robot.discovered_map[i][j] == 2:
                     y, x = get_matrix_coords(self._robot.center)
                     dist = abs(y - i) + abs(x - j)
 
@@ -68,21 +44,9 @@ class Exploration:
         while True:
             try:
                 while not is_back_at_start:
-                    print('-' * 50)
+
                     updated_cells = self._robot.get_sensor_readings()
-                    print('updated_cells (sensor_readings): {}'.format(updated_cells)) # sensor_reading
                     yield updated_cells
-
-                    print('Cells: {}'.format(get_robot_cells(self._robot.center)))
-                    print('Facing: {}'.format(DIRECTIONS[self._robot.facing]))
-
-                    print('Exploration Status Map:')
-                    for _ in self._robot.exploration_status[::-1]:
-                        print(_)
-
-                    print('Discovered Map:')
-                    for _ in self._robot.discovered_map[::-1]:
-                        print(_)
 
                     in_efficiency_limit = self._robot.in_efficiency_limit()
 
@@ -90,7 +54,6 @@ class Exploration:
                     if not in_efficiency_limit and self._robot.check_free(LEFT):
                         updated_cells = self._robot.move_robot(LEFT)
                         print('LEFT Free')
-
                         yield LEFT, MOVE, updated_cells
                     elif self._robot.check_free(FORWARD):
                         print('Forward Free')
@@ -140,8 +103,6 @@ class Exploration:
 
                     if self._robot.center == START:
                         is_back_at_start = True
-                        print('='* 50)
-                        print('BACK AT START')
 
                     yield is_back_at_start
 
@@ -187,16 +148,6 @@ class Exploration:
                                     if moves:
                                         break
 
-                                # Start (Anqi)
-                                # if not moves:
-                                #     double_double_adjacent_cells = [e for e in get_robot_cells(robot_cell_index, 3)
-                                #                                     if e not in get_robot_cells(robot_cell_index, 2)]
-                                #     moves = get_shortest_valid_path(self._robot,
-                                #                                     self._robot.center, double_double_adjacent_cells)
-                                #     if moves:
-                                #         break
-                                # End (Anqi)
-
                         if not moves:
                             print('WARNING: Cannot find shortest path moves to unexplored')
                             raise PathNotFound
@@ -209,15 +160,6 @@ class Exploration:
                                 yield "updated", updated_cells, is_complete
 
                                 if is_complete:
-                                    print('Is_Complete: ')
-                                    print('Exploration Status Map:')
-                                    for _ in self._robot.exploration_status:
-                                        print(_)
-
-                                    print('Discovered Map: :')
-                                    for _ in self._robot.discovered_map:
-                                        print(_)
-
                                     raise ExploreComplete
                                 raise CellsUpdated
                             self._robot.move_robot(move)
@@ -233,9 +175,6 @@ class Exploration:
                 break
 
         # Return to start after completion
-
-        print("Returning to Start...")
-
         center_y, center_x = get_matrix_coords(self._robot.center)
         start_y, start_x = get_matrix_coords(START)
 
@@ -259,8 +198,6 @@ class Exploration:
         :param sender: The object that communicates with the RPi.
         :return: True when exploration is complete.
         """
-        enable_print()
-
         yield self._robot.mark_robot_standing()  # Mark initial robot space explored
 
         is_back_at_start = False
@@ -268,46 +205,61 @@ class Exploration:
             try:
                 # Left-wall-hugging until loop
                 while not is_back_at_start:
-                    print('-' * 50)
                     updated_cells = self._robot.get_sensor_readings(sender)
                     yield updated_cells
 
-                    print('Cells: {}'.format(get_robot_cells(self._robot.center)))
-                    print('Facing: {}'.format(DIRECTIONS[self._robot.facing]))
+                    in_efficiency_limit = self._robot.in_efficiency_limit()
 
-                    print('Exploration Status Map:')
-                    for _ in self._robot.exploration_status[::-1]:
-                        print(_)
-
-                    print('Discovered Map:')
-                    for _ in self._robot.discovered_map[::-1]:
-                        print(_)
-
-                    if self._robot.check_free(LEFT):
+                    if not in_efficiency_limit and self._robot.check_free(LEFT):
                         updated_cells = self._robot.move_robot(sender, LEFT)
                         print('LEFT Free')
                         yield LEFT, MOVE, updated_cells
                     elif self._robot.check_free(FORWARD):
-                        updated_cells = self._robot.move_robot(sender, FORWARD)
                         print('Forward Free')
+                        updated_cells = self._robot.move_robot(sender, FORWARD)
                         yield FORWARD, MOVE, updated_cells
-                    elif self._robot.check_free(RIGHT):
-                        updated_cells = self._robot.move_robot(sender, RIGHT)
-                        print('Right Free')
-                        yield RIGHT, MOVE, updated_cells
                     else:
-                        self._robot.turn_robot(sender, BACKWARD)
-                        yield BACKWARD, TURN, {}
+                        if in_efficiency_limit:
+                            print('Robot in efficiency limit.... ')
+
+                            if self._robot.check_free(LEFT):
+                                updated_cells = self._robot.move_robot(sender, LEFT)
+                                yield LEFT, MOVE, updated_cells
+
+                                is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
+                                yield is_complete
+
+                                if is_complete:
+                                    raise ExploreComplete
+
+                                if self._robot.center == START:
+                                    is_back_at_start = True
+                                yield is_back_at_start
+                                if is_back_at_start:
+                                    break
+                                updated_cells = self._robot.get_sensor_readings(sender)
+                                yield updated_cells
+
+                                self._robot.turn_robot(sender, BACKWARD)
+                                yield BACKWARD, TURN, {}
+
+                            else:
+                                self._robot.turn_robot(sender, RIGHT)
+                                yield RIGHT, TURN, {}
+
+                        else:
+                            self._robot.turn_robot(sender, RIGHT)
+                            yield RIGHT, TURN, {}
+
 
                     is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
                     yield is_complete
+
                     if is_complete:
                         raise ExploreComplete
 
                     if self._robot.center == START:
                         is_back_at_start = True
-                        print('='* 50)
-                        print('BACK AT START')
 
                     yield is_back_at_start
 
@@ -329,6 +281,9 @@ class Exploration:
 
                         # Check adjacent cells
                         if not moves:
+                            print('WARNING: Cannot find shortest path moves to nearest unexplored')
+
+                            print('Finding shortest valid path moves to adjacent cells......')
                             adjacent_cells = get_robot_cells(get_grid_index(nearest_unexplored_y, nearest_unexplored_x))
                             del adjacent_cells[4]
 
@@ -340,26 +295,15 @@ class Exploration:
 
                             # Check adjacent cells of SW/SE/NW/NE cells
                             if not moves:
+                                print('WARNING: Cannot find shortest valid path moves to adjacent cells')
+
+                                print('Finding shortest valid path moves to adjacent cells of SW/SE/NW/NE cells......')
                                 swsenwne_cells = [adjacent_cells[0], adjacent_cells[2], adjacent_cells[5],
                                                   adjacent_cells[7]]
 
                                 for cell in swsenwne_cells:
                                     double_adjacent_cells = get_robot_cells(cell)
-                                    if swsenwne_cells.index(cell) == 0:
-                                        unwanted = set(double_adjacent_cells[1:3])
-                                        unwanted.update(double_adjacent_cells[4:6])
-                                    elif swsenwne_cells.index(cell) == 1:
-                                        unwanted = set(double_adjacent_cells[0:2])
-                                        unwanted.update(double_adjacent_cells[3:5])
-                                    elif swsenwne_cells.index(cell) == 2:
-                                        unwanted = set(double_adjacent_cells[4:6])
-                                        unwanted.update(double_adjacent_cells[7:9])
-                                    elif swsenwne_cells.index(cell) == 3:
-                                        unwanted = set(double_adjacent_cells[3:5])
-                                        unwanted.update(double_adjacent_cells[6:8])
-
-                                    double_adjacent_cells = [e for e in double_adjacent_cells if e not in unwanted]
-
+                                    double_adjacent_cells = [e for e in double_adjacent_cells if e not in adjacent_cells]
                                     moves = get_shortest_valid_path(self._robot,
                                                                     self._robot.center, double_adjacent_cells)
                                     if moves:
@@ -371,203 +315,27 @@ class Exploration:
 
                         for move in moves:
                             updated_cells = self._robot.get_sensor_readings(sender)
-                            is_complete = self._robot.is_complete(self._exploration_limit, self._start_time,
-                                                                  self._time_limit)
-                            yield "updated", updated_cells, is_complete
-
-                            if is_complete:
-                                print('Is_Complete: ')
-                                print('Exploration Status Map:')
-                                for _ in self._robot.exploration_status:
-                                    print(_)
-
-                                print('Discovered Map: :')
-                                for _ in self._robot.discovered_map:
-                                    print(_)
-
-                                raise ExploreComplete
-                            raise CellsUpdated
-
-                            updated_cells = self._robot.move_robot(sender, move)
-                            yield "moved", move, False
-
-                    except CellsUpdated:
-                        continue
-
-            except ExploreComplete:
-                break
-            except PathNotFound:
-                yield "invalid", None, None
-                break
-
-        # Return to start after completion
-
-        print("Returning to Start...")
-
-        while True:
-            center_y, center_x = get_matrix_coords(self._robot.center)
-            start_y, start_x = get_matrix_coords(START)
-
-            try:
-                moves = get_shortest_path_moves(self._robot,
-                                                (center_y, center_x), (start_y, start_x), is_give_up=True)
-
-                if not moves:
-                    break
-
-                for move in moves:
-                    # In case of undetected blocks in the path home
-                    updated_cells = self._robot.get_sensor_readings(sender)
-                    if updated_cells:
-                        yield move
-                        raise CellsUpdated
-                    self._robot.move_robot(sender, move)
-                    yield move
-
-            except IndexError:
-                break
-            except CellsUpdated:
-                continue
-
-        return True
-
-    def start_real_efficient(self, sender):
-        """
-        Experimental explore function; implements more efficient movement patterns.
-        Assumes robot movement/turning is reliably accurate.
-
-        :param sender: Communicates with RPi
-        :return: When explore is completed and robot is back at start, return to controller
-        """
-        yield self._robot.mark_robot_standing()  # Mark initial robot space explored
-
-        is_back_at_start = False
-        while True:
-            try:
-                while not is_back_at_start:
-                    updated_cells = self._robot.get_sensor_readings(sender)
-                    yield updated_cells
-
-                    if self._robot.check_free(LEFT) and not self._robot.in_efficiency_limit():
-                        updated_cells = self._robot.move_robot(sender, LEFT)
-                        yield LEFT, MOVE, updated_cells
-                    elif self._robot.check_free(FORWARD):
-                        updated_cells = self._robot.move_robot(sender, FORWARD)
-                        yield FORWARD, MOVE, updated_cells
-                    else:
-                        if self._robot.in_efficiency_limit():
-                            if self._robot.check_free(LEFT):
-                                updated_cells = self._robot.move_robot(sender, LEFT)
-                                yield LEFT, MOVE, updated_cells
-                                yield self._robot.is_complete(self._exploration_limit, self._start_time,
-                                                              self._time_limit)
-                                if self._robot.is_complete(self._exploration_limit, self._start_time,
-                                                           self._time_limit):
-                                    raise ExploreComplete
-
-                                if self._robot.center == START:
-                                    is_back_at_start = True
-                                yield is_back_at_start
-                                if is_back_at_start:
-                                    break
-                                updated_cells = self._robot.get_sensor_readings(sender)
-                                yield updated_cells
-                                self._robot.turn_robot(sender, RIGHT)
-                                self._robot.turn_robot(sender, RIGHT)
-                                yield BACKWARD, TURN, {}
-                        else:
-                            self._robot.turn_robot(sender, RIGHT)
-                            yield RIGHT, TURN, {}
-
-                    is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
-                    yield is_complete
-                    if is_complete:
-                        raise ExploreComplete
-
-                    if self._robot.center == START:
-                        is_back_at_start = True
-                        print("looped")
-
-                    yield is_back_at_start
-
-                if self._robot.get_completion_percentage() >= 97.5:
-                    return True
-
-                # Finding shortest path to nearest unexplored square
-                while True:
-                    try:
-                        nearest_unexplored_y, nearest_unexplored_x = self._get_nearest_unexplored()
-                        center_y, center_x = get_matrix_coords(self._robot.center)
-
-                        moves = get_shortest_path_moves(self._robot,
-                                                        (center_y, center_x),
-                                                        (nearest_unexplored_y, nearest_unexplored_x))
-
-                        if not moves:  # Check adjacent cells
-                            adjacent_cells = get_robot_cells(get_grid_index(nearest_unexplored_y, nearest_unexplored_x))
-                            del adjacent_cells[4]
-
-                            adj_order = [5, 6, 7, 3, 4, 0, 1, 2]
-                            adjacent_cells = [adjacent_cells[i] for i in adj_order]
-
-                            moves = get_shortest_valid_path(self._robot,
-                                                            self._robot.center, adjacent_cells)
-
-                            # Check adjacent cells of SW/SE/NW/NE cells
-                            if not moves:
-                                swsenwne_cells = [adjacent_cells[0], adjacent_cells[2], adjacent_cells[5],
-                                                  adjacent_cells[7]]
-
-                                for cell in swsenwne_cells:
-                                    double_adjacent_cells = get_robot_cells(cell)
-                                    if swsenwne_cells.index(cell) == 0:
-                                        unwanted = set(double_adjacent_cells[1:3])
-                                        unwanted.update(double_adjacent_cells[4:6])
-                                    elif swsenwne_cells.index(cell) == 1:
-                                        unwanted = set(double_adjacent_cells[0:2])
-                                        unwanted.update(double_adjacent_cells[3:5])
-                                    elif swsenwne_cells.index(cell) == 2:
-                                        unwanted = set(double_adjacent_cells[4:6])
-                                        unwanted.update(double_adjacent_cells[7:9])
-                                    elif swsenwne_cells.index(cell) == 3:
-                                        unwanted = set(double_adjacent_cells[3:5])
-                                        unwanted.update(double_adjacent_cells[6:8])
-
-                                    double_adjacent_cells = [e for e in double_adjacent_cells if e not in unwanted]
-
-                                    moves = get_shortest_valid_path(self._robot,
-                                                                    self._robot.center, double_adjacent_cells)
-                                    if moves:
-                                        break
-
-                        if not moves:
-                            raise PathNotFound
-
-                        updated_cells = self._robot.get_sensor_readings(sender)
-                        for move in moves:
                             if updated_cells:
                                 is_complete = self._robot.is_complete(self._exploration_limit, self._start_time,
-                                                                      self._time_limit)
+                                                        self._time_limit)
                                 yield "updated", updated_cells, is_complete
+
                                 if is_complete:
                                     raise ExploreComplete
                                 raise CellsUpdated
-                            updated_cells = self._robot.move_robot(sender, move)
+                            self._robot.move_robot(sender, move)
                             yield "moved", move, False
-
                     except CellsUpdated:
                         continue
 
             except ExploreComplete:
                 break
+
             except PathNotFound:
                 yield "invalid", None, None
                 break
 
         # Return to start after completion
-
-        print("Returning to Start...")
-
         while True:
             center_y, center_x = get_matrix_coords(self._robot.center)
             start_y, start_x = get_matrix_coords(START)
@@ -577,16 +345,17 @@ class Exploration:
                                                 (center_y, center_x), (start_y, start_x), is_give_up=True)
 
                 if not moves:
-                    break
+                    return True
 
-                for move in moves:
-                    # In case of undetected blocks in the path home
-                    updated_cells = self._robot.get_sensor_readings(sender)
-                    if updated_cells:
+                else:
+                    for move in moves:
+                        # In case of undetected blocks in the path home
+                        updated_cells = self._robot.get_sensor_readings(sender)
+                        if updated_cells:
+                            yield move
+                            raise CellsUpdated
+                        self._robot.move_robot(sender, move)
                         yield move
-                        raise CellsUpdated
-                    self._robot.move_robot(sender, move)
-                    yield move
 
             except IndexError:
                 break
@@ -594,3 +363,26 @@ class Exploration:
                 continue
 
         return True
+
+
+class ExploreComplete(Exception):
+    """
+    This exception is raised when exploration is complete.
+    """
+    def __init__(self, message="Exploration complete!"):
+        print(message)
+
+
+class CellsUpdated(Exception):
+    """
+    This exception is raised when there has been an update in the robot's internal map
+    """
+    pass
+
+
+class PathNotFound(Exception):
+    """
+    This exception is raised when a path to the location cannot be found.
+    """
+    def __init__(self):
+        print("Valid path not found!")

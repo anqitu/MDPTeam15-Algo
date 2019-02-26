@@ -99,10 +99,10 @@ def get_shortest_path_moves(robot, start, goal, before_start_point=None, is_give
     """
     limited_map = []
     if is_give_up:
-        for row in robot.discovered_map[::-1]:
+        for row in robot.discovered_map:
             limited_map.append([1 if x == 2 else x for x in row])
     else:
-        limited_map = robot.discovered_map[::-1]
+        limited_map = robot.discovered_map
 
     if limited_map[start[0]][start[1]]:
         return False
@@ -111,7 +111,7 @@ def get_shortest_path_moves(robot, start, goal, before_start_point=None, is_give
                               before_start_point=before_start_point)
 
     print('=' * 50)
-    print('Fast Path from {} to {}: '.format(start, goal))
+    print('Fast Path Cell List from {} to {}: '.format(start, goal))
     if not cells:
         print('WARNING: No Path Found!')
     else:
@@ -173,6 +173,9 @@ def get_shortest_path_moves(robot, start, goal, before_start_point=None, is_give
         move_list.append(to_move)
 
         prev_cell = cell
+
+    print('Fast Path Move List from {} to {}: '.format(start, goal))
+    print(move_list)
 
     return move_list
 

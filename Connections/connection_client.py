@@ -45,7 +45,6 @@ class Message_Handler:
         rpi_recv_thread.start()
 
     def _receiver_rpi(self, sock):
-        enable_print()
         """
         Listen for messages from the RPi and store the messages into a queue.
 
@@ -57,7 +56,9 @@ class Message_Handler:
             data = data.decode().strip()
             print('RECEIVED PRi: {}'.format(data))
             if not data:
+                enable_print()
                 print('RPi disconnected')
+                disable_print()
                 break
 
             # 'P{"status":"explore done"}P{"status":"explore done"}'
@@ -153,7 +154,6 @@ class Message_Handler:
         _send(self._rpi_sock, to_send)
 
     def wait_arduino(self, msg_or_pattern, is_regex=False):
-        enable_print()
         """
         Wait for a message from the Arduino.
 

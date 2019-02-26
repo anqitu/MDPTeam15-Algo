@@ -1,6 +1,6 @@
+from Controllers.controller_gui import Window
 from tkinter import *
-
-import Controllers.controller_with_gui as gui
+from Utils.utils import *
 
 """This module starts an instance of the GUI application that simulates a run."""
 
@@ -11,6 +11,6 @@ if __name__ == '__main__':
 
     top = Tk()
 
-    app = gui.Window(top)
+    app = Window(top)
 
     top.mainloop()
