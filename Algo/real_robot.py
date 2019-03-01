@@ -21,9 +21,9 @@ class Robot:
         self.center = START
         self.facing = facing
         self.discovered_map = discovered_map
-        self._probability_map = [[[0.0, 0.0] for _ in range(ROW_LENGTH)] for _ in range(COL_LENGTH)]
-        self._arrow_map = [[[0, 0, 0, 0] for _ in range(ROW_LENGTH)] for _ in range(COL_LENGTH)]
-        self._sensors = [
+        self.probability_map = [[[0.0, 0.0] for _ in range(ROW_LENGTH)] for _ in range(COL_LENGTH)]
+        self.arrow_map = [[[0, 0, 0, 0] for _ in range(ROW_LENGTH)] for _ in range(COL_LENGTH)]
+        self.sensors = [
             #   2 3 4
             # 1       5
             # 0
@@ -36,7 +36,7 @@ class Robot:
             {"mount_loc": NES, "facing": EAST, "range": 4, "blind_spot": 0}
         ]
 
-        regex_str = '^(\d,){%s}$' % (len(self._sensors) * NUM_SENSOR_READINGS)
+        regex_str = '^(\d,){%s}$' % (len(self.sensors) * NUM_SENSOR_READINGS)
         self._readings_regex = re.compile(regex_str)
 
     def _mark_probability(self, cell, count, total):
@@ -54,16 +54,16 @@ class Robot:
         y, x = get_matrix_coords(cell)
         print('Current Sesnsor Reading: x, y, count, total: {}'.format((x, y, count, total)))
 
-        if self._probability_map[y][x][0] == 1.0 and self._probability_map[y][x][1] == 0.0:
+        if self.probability_map[y][x][0] == 1.0 and self.probability_map[y][x][1] == 0.0:
             print('perm')
             return None, None
 
         # Update counts
-        self._probability_map[y][x][0] += count
-        self._probability_map[y][x][1] += total
+        self.probability_map[y][x][0] += count
+        self.probability_map[y][x][1] += total
 
-        prob_obstacle = self._probability_map[y][x][0]
-        prob_total = self._probability_map[y][x][1]
+        prob_obstacle = self.probability_map[y][x][0]
+        prob_total = self.probability_map[y][x][1]
         value = int(prob_obstacle / prob_total > 0.5)
 
         print('Cumulative Sesnsor Reading: x, y, prob_obstacle, prob_total: {}'.format((x, y, prob_obstacle, prob_total)))
@@ -88,8 +88,8 @@ class Robot:
         """
         y, x = get_matrix_coords(cell)
 
-        self._probability_map[y][x][0] = 1.0
-        self._probability_map[y][x][1] = 0.0
+        self.probability_map[y][x][0] = 1.0
+        self.probability_map[y][x][1] = 0.0
 
         if not self.exploration_status[y][x]:
             self.exploration_status[y][x] = 1
@@ -100,17 +100,19 @@ class Robot:
 
     def _mark_arrow_taken(self, y, x, facing):
         """
-        Mark the face and opposite face of a cell having its picture taken by the arrow recognizer.
+        Mark the face a cell having its picture taken by the arrow recognizer.
 
         :param y: The y-coordinate of the cell to be marked.
         :param x: The x-coordinate of the cell to be marked.
         :param facing: The facing of the robot when the photo was taken.
         :return: True if success. No definition of failure provided, however it is easy to add if required.
         """
-        opposite = (facing + 2) % 4
+        # facing of the obstacle
+        # opposite = (facing + 2) % 4
 
-        # self._arrow_map[y][x][facing] = 1
-        self._arrow_map[y][x][opposite] = 1
+        self.arrow_map[y][x][facing] = 1
+        # self.arrow_map[y][x][opposite] = 1
+        print('Mark Arrow Taken at {}'.format((x, y, DIRECTIONS[facing])))
 
         return True
 
@@ -294,7 +296,7 @@ class Robot:
         arrow_range = 1
         y, x = get_matrix_coords(self.center)
         discovered_map = self.discovered_map
-        arrow_map = self._arrow_map
+        arrow_map = self.arrow_map
         facing = self.facing
 
         try:
@@ -304,11 +306,12 @@ class Robot:
                     new_x = x - distance
                     if new_x < 0:
                         raise IndexError
-                    print('checking %s,%s %s,%s %s,%s' % (y, new_x, y + 1, new_x, y - 1, new_x))
+                    print('checking %s,%s %s,%s %s,%s' % (new_x, y, new_x, y + 1, new_x, y - 1))
                     obstacles = [discovered_map[y][new_x] == 1, discovered_map[y + 1][new_x] == 1,
                                  discovered_map[y - 1][new_x] == 1]
                     marked = [arrow_map[y][new_x][facing], arrow_map[y + 1][new_x][facing],
                               arrow_map[y][new_x][facing]]
+                    # there is an obstacle and all are not marked
                     if any(obstacles) and not any(marked):
                         self._mark_arrow_taken(y, new_x, facing)
                         self._mark_arrow_taken(y + 1, new_x, facing)
@@ -316,7 +319,7 @@ class Robot:
                         return True
                 elif facing == EAST:
                     new_y = y + distance
-                    print('checking %s,%s %s,%s %s,%s' % (new_y, x, new_y, x + 1, new_y, x - 1))
+                    print('checking %s,%s %s,%s %s,%s' % (x, new_y, x + 1, new_y, x - 1, new_y))
                     obstacles = [discovered_map[new_y][x] == 1, discovered_map[new_y][x + 1] == 1,
                                  discovered_map[new_y][x - 1] == 1]
                     marked = [arrow_map[new_y][x][facing], arrow_map[new_y][x + 1][facing],
@@ -328,7 +331,7 @@ class Robot:
                         return True
                 elif facing == SOUTH:
                     new_x = x + distance
-                    print('checking %s,%s %s,%s %s,%s' % (y, new_x, y + 1, new_x, y - 1, new_x))
+                    print('checking %s,%s %s,%s %s,%s' % (new_x, y, new_x, y + 1, new_x, y - 1))
                     obstacles = [discovered_map[y][new_x] == 1, discovered_map[y + 1][new_x] == 1,
                                  discovered_map[y - 1][new_x] == 1]
                     marked = [arrow_map[y][new_x][facing], arrow_map[y + 1][new_x][facing],
@@ -342,7 +345,7 @@ class Robot:
                     new_y = y - distance
                     if new_y < 0:
                         raise IndexError
-                    print('checking %s,%s %s,%s %s,%s' % (new_y, x, new_y, x + 1, new_y, x - 1))
+                    print('checking %s,%s %s,%s %s,%s' % (x, new_y, x + 1, new_y, x - 1, new_y))
                     obstacles = [discovered_map[new_y][x] == 1, discovered_map[new_y][x + 1] == 1,
                                  discovered_map[new_y][x - 1] == 1]
                     marked = [arrow_map[new_y][x][facing], arrow_map[new_y][x + 1][facing],
@@ -365,7 +368,9 @@ class Robot:
         :param sender: The object that communicates with the RPi.
         :return: N/A
         """
+        y, x = get_matrix_coords(self.center)
         if self.is_arrow_possible():
+            print('Arrow Possible @ Robot Position: {}'.format((x, y, DIRECTIONS[self.facing])))
             y, x = get_matrix_coords(self.center)
             msg = '%s,%s,%s' % (x, y, self.facing)
             enable_print()
@@ -374,7 +379,7 @@ class Robot:
             disable_print()
 
         else:
-            print(get_matrix_coords(self.center), 'false')
+            print('Arrow Not Possible @ Robot Position: {}'.format((x, y, DIRECTIONS[self.facing])))
 
     def get_sensor_readings(self, sender):
         """
@@ -405,13 +410,13 @@ class Robot:
         readings = [int(x) for x in readings]
 
         # split readings list into len(sensors)-sized chunks
-        readings = [readings[i:i + len(self._sensors)] for i in range(0, len(readings), len(self._sensors))]
+        readings = [readings[i:i + len(self.sensors)] for i in range(0, len(readings), len(self.sensors))]
 
         # transpose list so that each row is the list of readings for that sensor
         readings = [[row[i] for row in readings] for i, _ in enumerate(readings[0])]
 
         robot_cells = get_robot_cells(self.center)
-        sensors = self._sensors[:]
+        sensors = self.sensors[:]
         sensor_index = sensors.index
         updated_cells = {}
 

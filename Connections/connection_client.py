@@ -62,26 +62,29 @@ class Message_Handler:
                 break
 
             # 'P{"status":"explore done"}P{"status":"explore done"}'
-            if data[0] == 'R':
-                data = data.split('R')
+            if data[:2] == 'RP':
+                data = data.split('RP')
                 data[:] = [x for x in data if x != '']
                 print('Data from RPi: {}'.format(data))
                 self._rpi_recv_queue.extend(data)
                 print('rpi_recv_queue: {}'.format(self._rpi_recv_queue))
 
-            if data[0] == 'T':
-                data = data.split('T')
+            elif data[:2] == 'AN':
+                data = data.split('AN')
                 data[:] = [x for x in data if x != '']
                 print('Data from Android: {}'.format(data))
                 self._android_recv_queue.extend(data)
                 print('android_recv_queue: {}'.format(self._android_recv_queue))
 
-            if data[0] == 'A':
-                data = data.split('A')
+            elif data[:2] == 'AR':
+                data = data.split('AR')
                 data[:] = [x for x in data if x != '']
                 print('Data from Arduino: {}'.format(data))
                 self._arduino_recv_queue.extend(data)
                 print('arduino_recv_queue: {}'.format(self._arduino_recv_queue))
+
+            else:
+                print('Data from Unknown Devices: {}'.format(data))
 
             if self._android_recv_queue:
                 next_command = self._android_recv_queue.pop(0)
@@ -140,17 +143,17 @@ class Message_Handler:
 
     def send_android(self, msg):
         """Send a message to the Android."""
-        to_send = 'T%s' % msg
+        to_send = 'AN%s' % msg
         _send(self._rpi_sock, to_send)
 
     def send_arduino(self, msg):
         """Send a message to the Arduino."""
-        to_send = 'A%s' % msg
+        to_send = 'AR%s' % msg
         _send(self._rpi_sock, to_send)
 
     def send_rpi(self, msg):
         """Send a message to the RPi."""
-        to_send = 'R%s' % msg
+        to_send = 'RP%s' % msg
         _send(self._rpi_sock, to_send)
 
     def wait_arduino(self, msg_or_pattern, is_regex=False):

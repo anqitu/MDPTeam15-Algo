@@ -83,7 +83,7 @@ class Window(Frame):
         self._button = Button(bg_frame, text="Explore", command=self._explore)
         self._button.grid(row=3, column=1)
 
-        self._fp_button = Button(bg_frame, text="Find Fastest Path", command=self._find_fastest_path)
+        self._fp_button = Button(bg_frame, text="Move Fastest Path", command=self._move_fastest_path)
         self._fp_button.grid(row=3, column=2)
 
         self._canvas = Canvas(self, height=COL_LENGTH * self._grid_size + 1, width=ROW_LENGTH * self._grid_size + 1,
@@ -105,13 +105,19 @@ class Window(Frame):
     def _explore(self):
         """Start the exploration."""
         start_time = time()
+
         time_limit = float(self._time_limit_entry.get().strip())
+        explore_limit = float(self._explore_entry.get().strip())
         timestep = float(self._timestep_entry.get().strip())
+
         self._robot.real_map = self._grid_map
-        exploration = Exploration(self._robot, start_time, float(self._explore_entry.get().strip()), time_limit)
+        exploration = Exploration(self._robot, start_time, explore_limit, time_limit)
+
         run = exploration.start()
+
         initial_pos = next(run)
         self._update_cells(initial_pos)
+
         while True:
             try:
                 # Exploration until completion
@@ -186,7 +192,77 @@ class Window(Frame):
                     self._move_robot(direction)
 
             except StopIteration:
+                print_map_info(self._robot)
                 break
+
+        enable_print()
+        print('Exploration Done')
+        disable_print()
+        self._calibrate_after_exploration()
+
+    def _calibrate_after_exploration(self):
+        """
+        Post-exploration calibration to prepare the robot for the fastest path.
+
+        :return: N/A
+        """
+        enable_print()
+        print('Calibrating...')
+        disable_print()
+
+        timestep = float(self._timestep_entry.get().strip())
+        self._fastest_path = self._find_fastest_path()
+
+        sleep(timestep)
+        self._robot.turn_robot(self._fastest_path[0])
+        self._turn_head(self._facing, self._fastest_path[0])
+
+        self._fastest_path[0] = FORWARD
+
+        enable_print()
+        print('Calibrating Done!')
+        disable_print()
+
+    def _find_fastest_path(self):
+        """Calculate and return the set of moves required for the fastest path."""
+        from Algo.sim_robot import Robot
+        clone_robot = Robot(exploration_status=self._robot.exploration_status,
+                            facing=self._robot.facing,
+                            discovered_map=self._robot.discovered_map,
+                            real_map=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)])
+
+        fastest_path_start_way_point = get_shortest_path_moves(clone_robot,
+                                                               start=(1, 1),
+                                                               goal=self._way_point)
+
+        if fastest_path_start_way_point:
+            for move in fastest_path_start_way_point:
+                clone_robot.move_robot(move)
+
+        before_way_point = previous_cell(clone_robot.center, clone_robot.facing)
+
+        fastest_path_way_point_goal = get_shortest_path_moves(clone_robot,
+                                                              start=self._way_point,
+                                                              goal=(18, 13),
+                                                              before_start_point=before_way_point)
+
+        return fastest_path_start_way_point + fastest_path_way_point_goal
+
+    def _move_fastest_path(self):
+        """Move the robot along the fastest path."""
+        if self._fastest_path:
+            timestep = float(self._timestep_entry.get().strip())
+            for move in self._fastest_path:
+                sleep(timestep)
+                self._robot.move_robot(move)
+                self._move_robot(move)
+            enable_print()
+            print('Reached GOAL!')
+            disable_print()
+        else:
+            enable_print()
+            print("No valid path")
+            disable_print()
 
     def _draw_grid(self):
         """Draw the virtual maze."""
@@ -376,7 +452,6 @@ class Window(Frame):
         self._canvas.move(self._head, 0, self._grid_size)
         self.update()
 
-
     def _update_cells(self, updated_cells):
         """Repaint the cells that have been updated."""
         start_cells = get_robot_cells(START)
@@ -390,6 +465,11 @@ class Window(Frame):
                 self.mark_cell(cell, EXPLORED)
             else:
                 self.mark_cell(cell, OBSTACLE)
+
+        if IS_ARROW_SCAN:
+            arrow_cells = self._robot.arrows
+            for x, y, facing in arrow_cells:
+                self._draw_arrow(get_grid_index(y, x), facing)
 
         self._percentage_completion_label.config(text=("%.2f" % self._robot.get_completion_percentage() + "%"))
 
@@ -411,69 +491,6 @@ class Window(Frame):
         print("File %s does not exist" % filename)
         return False
 
-    def _find_fastest_path(self):
-        """Find the fastest path from the start to the goal zone."""
-        for row in range(NUM_ROWS):
-            for col in range(NUM_COLS):
-                try:
-                    if self._grid_map[row][col] == 3:
-                        self._mark_open(row * ROW_LENGTH + col + 1)
-                except AttributeError:
-                    continue
-
-        fastest_path_start_way_point = get_shortest_path_moves(self._robot,
-                                                                  start=(1, 1),
-                                                                  goal=self.way_point)
-        self._move_fastest_path(fastest_path_start_way_point)
-
-        before_way_point = previous_cell(self._robot.center, self._robot.facing)
-        fastest_path_way_point_goal = get_shortest_path_moves(self._robot,
-                                                                 start=self.way_point,
-                                                                 goal=(18, 13),
-                                                                 before_start_point=before_way_point)
-        self._move_fastest_path(fastest_path_way_point_goal)
-
-    def _move_fastest_path(self, fastest_path):
-        """Move the robot along the fastest path."""
-        timestep = float(self._timestep_entry.get().strip())
-        if fastest_path:
-            for move in fastest_path:
-                sleep(timestep)
-                self._robot.move_robot(move)
-                self._move_robot(move)
-        else:
-            print("No valid path")
-
-    def _mark_wall(self, grid_num):
-        """
-        Mark a grid as obstructed
-
-        :param grid_num: ID of the grid to be marked
-        :return: N/A
-        """
-        self._canvas.itemconfig(grid_num, fill="#f44336")
-        self.update()
-
-    def _mark_open(self, grid_num):
-        """
-        Mark a grid as unobstructed
-
-        :param grid_num: ID of the grid to be marked
-        :return: N/A
-        """
-        self._canvas.itemconfig(grid_num, fill="#f3f3f3")
-        self.update()
-
-    def _mark_path(self, grid_num):
-        """
-        Mark a grid as obstructed
-
-        :param grid_num: ID of the grid to be marked
-        :return: N/A
-        """
-        self._canvas.itemconfig(grid_num, fill="#43bc98")
-        self.update()
-
     def _mark_way_point(self, grid_num):
         """
         Mark a grid as obstructed
@@ -494,7 +511,7 @@ class Window(Frame):
         file = open(filename, mode="r")
         map_str = file.read()
 
-        match = re.fullmatch("[01\n]*", map_str)
+        match = re.fullmatch("[012345\n]*", map_str)
         if match:
             self._grid_map = []
             row_strings = map_str.split("\n")
@@ -520,15 +537,26 @@ class Window(Frame):
         self._canvas.itemconfig(cell_index, fill=cell_type)
         self.update()
 
+    def _draw_arrow(self, location, facing):
+        top_left_grid = self._canvas.coords(location)
+        x, y = top_left_grid[0], top_left_grid[1]
+
+        if facing == NORTH:
+            points = [x, y + self._grid_size, x + self._grid_size, y + self._grid_size, x + self._grid_size/2, y]
+        elif facing == SOUTH:
+            points = [x, y, x + self._grid_size, y, x + self._grid_size/2, y + self._grid_size]
+        elif facing == EAST:
+            points = [x, y, x, y + self._grid_size, x + self._grid_size, y + self._grid_size/2]
+        else:
+            points = [x + self._grid_size, y, x + self._grid_size, y + self._grid_size, x, y + self._grid_size/2]
+
+        self._canvas.create_polygon(points, fill='gold', width=3)
+
     def _on_grid_click(self, event, arg):
         """Mark a cell as the waypoint."""
-        try:
-            self._mark_open(self.way_point[0] * ROW_LENGTH + self.way_point[1] + 1)
-        except AttributeError:
-            pass
 
-        self.way_point = (19 - int(event.y/30), int(event.x/30))
-        self._mark_way_point(self.way_point[0] * ROW_LENGTH + self.way_point[1] + 1)
+        self._way_point = (19 - int(event.y/30), int(event.x/30))
+        self._mark_way_point(self._way_point[0] * ROW_LENGTH + self._way_point[1] + 1)
         event.widget.itemconfig(arg, activefill="#00ffff")
 
 

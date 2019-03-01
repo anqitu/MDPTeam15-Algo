@@ -14,7 +14,9 @@ class Robot:
         self.facing = facing
         self.discovered_map = discovered_map
         self.real_map = real_map
-        self._sensors = [
+        self.arrow_map = [[[0, 0, 0, 0] for _ in range(ROW_LENGTH)] for _ in range(COL_LENGTH)]
+        self.arrows = []
+        self.sensors = [
             {"mount_loc": NWS, "facing": WEST, "range": 2, "blind_spot": 0},
             {"mount_loc": WS, "facing": WEST, "range": 2, "blind_spot": 0},
             {"mount_loc": NWS, "facing": NORTH, "range": 4, "blind_spot": 0},
@@ -37,9 +39,40 @@ class Robot:
         # if exploration_status not 0
         if not self.exploration_status[y][x]:
             self.exploration_status[y][x] = 1
-            self.discovered_map[y][x] = self.real_map[19 - y][x]
+            self.discovered_map[y][x] = int(self.real_map[19 - y][x] != 0)
             return get_grid_index(y, x), self.discovered_map[y][x]
         return None, None
+
+    def _mark_arrow_taken(self, y, x, facing):
+        """
+        Mark the face a cell having its picture taken by the arrow recognizer.
+
+        :param y: The y-coordinate of the cell to be marked.
+        :param x: The x-coordinate of the cell to be marked.
+        :param facing: The facing of the robot when the photo was taken.
+        :return: True if success. No definition of failure provided, however it is easy to add if required.
+        """
+        # facing of the obstacle
+        # opposite = (facing + 2) % 4
+
+        self.arrow_map[y][x][facing] = 1
+        # self.arrow_map[y][x][opposite] = 1
+        print('Mark Arrow Taken at {}'.format((x, y, DIRECTIONS[facing])))
+
+        return True
+
+    def _mark_arrow_position(self, y, x, facing):
+        """
+        Mark position of a detected arrow
+
+        :param y: The y-coordinate of the cell to be marked.
+        :param x: The x-coordinate of the cell to be marked.
+        :param facing: The facing of the robot when the photo was taken.
+        """
+        if self.real_map[19-y][x] == facing + 2:
+            self.arrows.append((x, y, facing))
+        print('Mark Arrow Position at {}'.format((x, y, DIRECTIONS[facing])))
+
 
     def in_efficiency_limit(self):
         """
@@ -105,7 +138,9 @@ class Robot:
         :return: N/A
         """
         self.facing = (self.facing + direction) % 4
-        print('turn_robot facing: {}'.format(self.facing))
+
+        if IS_ARROW_SCAN:
+            self.check_arrow()
 
     def move_robot(self, direction):
         """
@@ -126,6 +161,9 @@ class Robot:
             self.center -= 1
 
         updated_cells = self.mark_robot_standing()
+
+        if IS_ARROW_SCAN:
+            self.check_arrow()
 
         return updated_cells
 
@@ -187,6 +225,98 @@ class Robot:
         except IndexError:
             return False
 
+    def is_arrow_possible(self):
+        """
+        # Camera put on the west of the robot
+
+        Check if it is possible to have arrows in the chosen direction.
+
+        The method also takes into consideration obstacles that have already been scanned for arrows. Will only return
+        true if there are faces that have not been scanned that are facing the robot.
+
+        :return: True if there are unscanned faces of obstacles in the path of the RPi camera, false otherwise.
+        """
+        arrow_range = 1
+        y, x = get_matrix_coords(self.center)
+        discovered_map = self.discovered_map
+        arrow_map = self.arrow_map
+        facing = self.facing
+
+        try:
+            # distance = [2 cells]
+            for distance in range(2, arrow_range + 2):
+                if facing == NORTH:
+                    new_x = x - distance
+                    if new_x < 0:
+                        raise IndexError
+
+                    flag = False
+                    for x, y in [(new_x, y), (new_x, y + 1), (new_x, y - 1)]:
+                        print('Checking %s,%s' % (x, y))
+                        if discovered_map[y][x] == 1 and not arrow_map[y][x][facing]:
+                            self._mark_arrow_taken(y, x, facing)
+                            self._mark_arrow_position(y, x, facing)
+                            flag = True
+                    return flag
+                elif facing == EAST:
+                    new_y = y + distance
+                    if new_y > 19:
+                        raise IndexError
+
+                    flag = False
+                    for x, y in [(x, new_y), (x + 1, new_y), (x - 1, new_y)]:
+                        print('Checking %s,%s' % (x, y))
+                        if discovered_map[y][x] == 1 and not arrow_map[y][x][facing]:
+                            self._mark_arrow_taken(y, x, facing)
+                            self._mark_arrow_position(y, x, facing)
+                            flag = True
+                    return flag
+                elif facing == SOUTH:
+                    new_x = x + distance
+                    if new_x > 14:
+                        raise IndexError
+
+                    flag = False
+                    for x, y in [(new_x, y), (new_x, y + 1), (new_x, y - 1)]:
+                        print('Checking %s,%s' % (x, y))
+                        if discovered_map[y][x] == 1 and not arrow_map[y][x][facing]:
+                            self._mark_arrow_taken(y, x, facing)
+                            self._mark_arrow_position(y, x, facing)
+                            flag = True
+                    return flag
+                elif facing == WEST:
+                    new_y = y - distance
+                    if new_y < 0:
+                        raise IndexError
+
+                    flag = False
+                    for x, y in [(x, new_y), (x + 1, new_y), (x - 1, new_y)]:
+                        print('Checking %s,%s' % (x, y))
+                        if discovered_map[y][x] == 1 and not arrow_map[y][x][facing]:
+                            self._mark_arrow_taken(y, x, facing)
+                            self._mark_arrow_position(y, x, facing)
+                            flag = True
+                    return flag
+            return False
+        except IndexError:
+            return False
+
+    def check_arrow(self):
+        """
+        Send the RPi a message to take a picture to check for arrows.
+
+        Check if there are potential unscanned arrows in the field of view of the RPi camera.
+        :return: N/A
+        """
+        y, x = get_matrix_coords(self.center)
+
+        if self.is_arrow_possible():
+            print('Arrow Possible @ Robot Position: {}'.format((x, y, DIRECTIONS[self.facing])))
+
+        else:
+            print('Arrow Not Possible @ Robot Position: {}'.format((x, y, DIRECTIONS[self.facing])))
+
+
     def get_sensor_readings(self):
         """
         Get simulated sensor readings by comparing the cells that are to be explored
@@ -197,7 +327,7 @@ class Robot:
         """
         updated_cells = {}
 
-        for sensor in self._sensors:
+        for sensor in self.sensors:
             true_facing = (sensor["facing"] + self.facing) % 4
 
             if sensor["mount_loc"] != CS:

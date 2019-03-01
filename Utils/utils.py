@@ -143,3 +143,7 @@ def print_map_info(robot):
     print('Discovered Map:')
     for _ in robot.discovered_map[::-1]:
         print(_)
+    print('Arrow Map:')
+    for _ in robot.arrow_map[::-1]:
+        print(_)
+    print('Arrows: {}'.format(robot.arrows))

@@ -101,8 +101,6 @@ class Window(Frame):
 
         disable_print()
 
-        self._stop_threads = False
-
     def _init_window(self):
         """
         Load all window elements.
@@ -163,25 +161,10 @@ class Window(Frame):
             enable_print()
             print('Start FAST PATH')
             disable_print()
-        elif msg == ANDROID_RESET:
-            self._reset()
-            enable_print()
-            print('RESET')
-            disable_print()
         elif msg == ANDROID_LOAD_EXPLORE_MAP:
             self._load_explore_map()
             enable_print()
             print('LOAD EXPLORE MAP')
-            disable_print()
-        elif msg == ANDROID_AUTO_UPDATE_TRUE:
-            enable_print()
-            self._auto_update = True
-            print('Enable Auto Update to Android')
-            disable_print()
-        elif msg == ANDROID_AUTO_UPDATE_FALSE:
-            enable_print()
-            self._auto_update = False
-            print('Mute Auto Update to Android')
             disable_print()
         elif msg == ANDROID_FORWARD:
             self._sender.send_arduino(ARDUINO_FORWARD)
@@ -191,28 +174,6 @@ class Window(Frame):
             self._sender.send_arduino(ARDUINO_TURN_RIGHT)
         elif msg == ANDROID_TURN_TO_BACKWARD:
             self._sender.send_arduino(ARDUINO_TURN_TO_BACKWARD)
-
-    def _reset(self):
-        self._stop_threads = True
-        if self._is_sim:
-            from Algo.sim_robot import Robot
-            self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
-                                facing=NORTH,
-                                discovered_map=[[2] * ROW_LENGTH for _ in range(COL_LENGTH)],
-                                real_map=[[]])
-        else:
-            from Algo.real_robot import Robot
-            self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
-                                facing=NORTH,
-                                discovered_map=[[2] * ROW_LENGTH for _ in range(COL_LENGTH)])
-
-        self._paint_map()
-        self._canvas.delete(self._robot_graphic)
-        self._canvas.delete(self._head)
-        self._facing = self._robot.facing
-        self._draw_robot(START, self._facing)
-
-        self._stop_threads = False
 
     def _load_explore_map(self):
         if self._is_sim:
@@ -248,6 +209,7 @@ class Window(Frame):
         print('Set Waypoint: {}'.format(coordinate))
         (col, row) = literal_eval(coordinate)
         self._way_point = (row, col)
+        self._mark_way_point(get_grid_index(_way_point))
         disable_print()
 
     def _calibrate(self):
@@ -267,37 +229,25 @@ class Window(Frame):
             self._sender.wait_arduino('D')
         self._sender.send_android('{"status":"calibrating done"}')
 
-    def _update_map_android(self):
-        """
-        Send the latest MDF strings to the Android device.
-
-        :return: N/A
-        """
-        self._sender.send_android('{"exploreMap":"%s","obstacleMap":"%s"}' % (self._robot.get_explore_string(), self._robot.get_map_string()))
-
-    def _update_coords_android(self):
-        """
-        Send the latest coordinates and facing of the robot to the Android device.
-
-        :return: N/A
-        """
-        y, x = get_matrix_coords(self._robot.center)
-        self._sender.send_android('{"robotPosition":[%s,%s,%s]}' % (str(x), str(y), str(self._robot.facing)))
-
-    def _update_android(self, is_update_map, is_update_coords, override=False):
+    def _update_android(self, is_update_map, is_update_coords):
         """
         Send the latest updates to the Android device.
 
         :param is_update_map: Whether the latest MDF string should be updated.
         :param is_update_coords: Whether the latest coordinates and facing should be updated.
-        :param override: If this is set to true, the update will be sent even when the Android is not in auto-update.
         :return: N/A
         """
-        if self._auto_update or override:
-            if is_update_map:
-                self._update_map_android()
-            if is_update_coords:
-                self._update_coords_android()
+        msgs = []
+        if is_update_map:
+            # Send the latest MDF strings to the Android device.
+            msgs.append('"exploreMap":"%s"'%self._robot.get_explore_string())
+            msgs.append('"obstacleMap":"%s"'%self._robot.get_map_string())
+        if is_update_coords:
+            y, x = get_matrix_coords(self._robot.center)
+            msgs.append('"robotPosition":"%s,%s,%s"' % (str(x), str(y), str(self._robot.facing)))
+            msgs.append('"robotPosition":"%s,%s,%s"' % (str(1), str(1), str(1)))
+
+        self._sender.send_android('{' + ','.join(msgs) + '}')
 
     def _explore(self):
         """Start the exploration."""
@@ -317,22 +267,16 @@ class Window(Frame):
         self._update_android(True, True)
 
         while True:
-            if self._stop_threads:
-                return
-
             try:
                 # Exploration until completion
                 while True:
-                    if self._stop_threads:
-                        return
-
                     print('-' * 50)
 
                     updated_cells = run.send(0)
                     print('updated_cells (sensor_readings): {}'.format(updated_cells)) # sensor_reading
 
                     self._update_cells(updated_cells)
-                    self._update_android(True, True)
+                    self._update_android(True, False)
 
                     print_map_info(self._robot)
 
@@ -344,16 +288,17 @@ class Window(Frame):
 
                     self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
                     self._update_cells(updated_cells)
-                    self._update_android(True, True)
 
                     if move_or_turn == MOVE:
                         self._move_robot(direction)
                     elif move_or_turn == TURN:
                         self._turn_head(self._facing, direction)
 
+                    self._update_android(True, True)
+
                     is_complete = run.send(0)
                     if is_complete:
-                        self._update_android(True, True, override=True)
+                        self._update_android(True, True)
 
                         enable_print()
                         print_map_info(self._robot)
@@ -370,9 +315,6 @@ class Window(Frame):
 
                         # Move to unexplored area
                         while True:
-                            if self._stop_threads:
-                                return
-
                             updated_or_moved, value, is_complete = run.send(0)
                             if self._is_sim:
                                 sleep(self._timestep)
@@ -382,16 +324,16 @@ class Window(Frame):
 
                             if updated_or_moved == "updated":
                                 self._update_cells(value)
-                                self._update_android(True, True)
+                                self._update_android(True, False)
                             elif updated_or_moved == "moved":
                                 self._move_robot(value)
-                                self._update_android(True, True)
+                                self._update_android(False, True)
                             else:
                                 # invalid (no path find)
                                 break
 
                             if is_complete:
-                                self._update_android(True, True, override=True)
+                                self._update_android(True, True)
 
                                 enable_print()
                                 print_map_info(self._robot)
@@ -404,23 +346,23 @@ class Window(Frame):
                 print("Returning to Start...")
                 disable_print()
                 while True:
-                    if self._stop_threads:
-                        return
                     direction = run.send(0)
                     if self._is_sim:
                         sleep(self._timestep)
 
                     self._move_robot(direction)
-                    self._update_android(True, True)
+                    self._update_android(False, True)
 
             except StopIteration:
                 print_map_info(self._robot)
                 break
 
         enable_print()
-        print('Calibrating...')
-        self._calibrate_after_exploration()
+        print('Exploration Done')
         disable_print()
+
+        self._sender.send_android('Exploration Done')
+        self._calibrate_after_exploration()
 
     def _calibrate_after_exploration(self):
         """
@@ -428,6 +370,9 @@ class Window(Frame):
 
         :return: N/A
         """
+        enable_print()
+        print('Calibrating...')
+        disable_print()
         self._fastest_path = self._find_fastest_path()
 
         # if self._is_sim:
@@ -441,9 +386,8 @@ class Window(Frame):
         #     self._turn_head(self._facing, self._fastest_path[0])
         #
         # self._fastest_path[0] = FORWARD
-        # self._update_android(True, True)
-        # self._sender.send_android('{"status":"explore done"}')
-        # self._sender.send_android('{"status":"calibrating done"}')
+        # self._update_android(False, True)
+        # self._sender.send_android('Calibrating Done')
         #
         # enable_print()
         # print('Calibrating Done!')
@@ -513,127 +457,6 @@ class Window(Frame):
             print("No valid path")
             disable_print()
 
-    def _update_cells(self, updated_cells):
-        """Repaint the cells that have been updated."""
-        start_cells = get_robot_cells(START)
-        goal_cells = get_robot_cells(GOAL)
-        for cell, value in updated_cells.items():
-            if cell in start_cells:
-                self.mark_cell(cell, START_AREA)
-            elif cell in goal_cells:
-                self.mark_cell(cell, GOAL_AREA)
-            elif not value:
-                self.mark_cell(cell, EXPLORED)
-            else:
-                self.mark_cell(cell, OBSTACLE)
-
-        self._percentage_completion_label.config(text=("%.2f" % self._robot.get_completion_percentage() + "%"))
-
-    def _load_map(self):
-        """
-        Load a map descriptor text file.
-
-        :return: True if the file exists and is able to be successfully parsed, false otherwise.
-        """
-        filename = askopenfilename(title="Select Map Descriptor", filetypes=[("Text Files (*.txt)", "*.txt")])
-
-        if filename:
-            print(filename)
-            if self._parse_map(filename):
-                self._paint_map()
-                return True
-            print("File %s cannot be parsed" % filename)
-            return False
-        print("File %s does not exist" % filename)
-        return False
-
-    def _mark_wall(self, grid_num):
-        """
-        Mark a grid as obstructed
-
-        :param grid_num: ID of the grid to be marked
-        :return: N/A
-        """
-        self._canvas.itemconfig(grid_num, fill="#f44336")
-        self.update()
-
-    def _mark_open(self, grid_num):
-        """
-        Mark a grid as unobstructed
-
-        :param grid_num: ID of the grid to be marked
-        :return: N/A
-        """
-        self._canvas.itemconfig(grid_num, fill="#f3f3f3")
-        self.update()
-
-    def _mark_path(self, grid_num):
-        """
-        Mark a grid as obstructed
-
-        :param grid_num: ID of the grid to be marked
-        :return: N/A
-        """
-        self._canvas.itemconfig(grid_num, fill="#43bc98")
-        self.update()
-
-    def _mark_way_point(self, grid_num):
-        """
-        Mark a grid as obstructed
-
-        :param grid_num: ID of the grid to be marked
-        :return: N/A
-        """
-        self._canvas.itemconfig(grid_num, fill="#ffc700")
-        self.update()
-
-    def _parse_map(self, filename):
-        """
-        Parse a map descriptor text file
-
-        :param filename: The name of the map descriptor file
-        :return: True if the file is able to be successfully parsed, false otherwise.
-        """
-        file = open(filename, mode="r")
-        map_str = file.read()
-
-        match = re.fullmatch("[01\n]*", map_str)
-        if match:
-            self._grid_map = []
-            row_strings = map_str.split("\n")
-            for row_string in row_strings:
-                grid_row = []
-                for char in row_string:
-                    bit = int(char)
-                    grid_row.append(bit)
-                self._grid_map.append(grid_row)
-            return True
-
-        return False
-
-    def _paint_map(self):
-        """Paint the unexplored map on the grid."""
-        for i in range(NUM_ROWS):
-            for j in range(NUM_COLS):
-                grid_num = i * ROW_LENGTH + j + 1
-                self.mark_cell(grid_num, UNEXPLORED)
-
-    def mark_cell(self, cell_index, cell_type):
-        """Mark a cell as a certain type."""
-        self._canvas.itemconfig(cell_index, fill=cell_type)
-        self.update()
-
-    def _on_grid_click(self, event, arg):
-        """Mark a cell as the waypoint."""
-        try:
-            self._mark_open(self.way_point[0] * ROW_LENGTH + self.way_point[1] + 1)
-        except AttributeError:
-            pass
-
-        self.way_point = (19 - int(event.y/30), int(event.x/30))
-        self._mark_way_point(self.way_point[0] * ROW_LENGTH + self.way_point[1] + 1)
-        event.widget.itemconfig(arg, activefill="#00ffff")
-
     def _draw_grid(self):
         """Draw the virtual maze."""
         self._grid_squares = []
@@ -644,9 +467,6 @@ class Window(Frame):
                 temp_square = self._canvas.create_rectangle(x * self._grid_size, (COL_LENGTH - 1 - y) * self._grid_size,
                                                             (x + 1) * self._grid_size,
                                                             (COL_LENGTH - y) * self._grid_size, width=3)
-
-                self._canvas.tag_bind(temp_square, "<Button-1>",
-                                      lambda event, arg=temp_square: self._on_grid_click(event, arg))
                 temp_row.append(temp_square)
 
             self._grid_squares.append(temp_row)
@@ -681,6 +501,7 @@ class Window(Frame):
                                               x + (2 * (self._grid_size // 3)) + 1,
                                               y + (2 * (self._grid_size // 3)) + 1,
                                               width=0, fill="#7acdc8")
+
 
     def _turn_head(self, facing, direction):
         """Move the graphical head of the robot in a certain direction."""
@@ -821,6 +642,107 @@ class Window(Frame):
         self._canvas.move(self._robot_graphic, 0, self._grid_size)
         self._canvas.move(self._head, 0, self._grid_size)
         self.update()
+
+    def _update_cells(self, updated_cells):
+        """Repaint the cells that have been updated."""
+        start_cells = get_robot_cells(START)
+        goal_cells = get_robot_cells(GOAL)
+        for cell, value in updated_cells.items():
+            if cell in start_cells:
+                self.mark_cell(cell, START_AREA)
+            elif cell in goal_cells:
+                self.mark_cell(cell, GOAL_AREA)
+            elif not value:
+                self.mark_cell(cell, EXPLORED)
+            else:
+                self.mark_cell(cell, OBSTACLE)
+
+        if IS_ARROW_SCAN:
+            arrow_cells = self._robot.arrows
+            for x, y, facing in arrow_cells:
+                self._draw_arrow(get_grid_index(y, x), facing)
+
+        self._percentage_completion_label.config(text=("%.2f" % self._robot.get_completion_percentage() + "%"))
+
+    def _load_map(self):
+        """
+        Load a map descriptor text file.
+
+        :return: True if the file exists and is able to be successfully parsed, false otherwise.
+        """
+        filename = askopenfilename(title="Select Map Descriptor", filetypes=[("Text Files (*.txt)", "*.txt")])
+
+        if filename:
+            print(filename)
+            if self._parse_map(filename):
+                self._paint_map()
+                return True
+            print("File %s cannot be parsed" % filename)
+            return False
+        print("File %s does not exist" % filename)
+        return False
+
+    def _mark_way_point(self, grid_num):
+        """
+        Mark a grid as obstructed
+
+        :param grid_num: ID of the grid to be marked
+        :return: N/A
+        """
+        self._canvas.itemconfig(grid_num, fill="#ffc700")
+        self.update()
+
+    def _parse_map(self, filename):
+        """
+        Parse a map descriptor text file
+
+        :param filename: The name of the map descriptor file
+        :return: True if the file is able to be successfully parsed, false otherwise.
+        """
+        file = open(filename, mode="r")
+        map_str = file.read()
+
+        match = re.fullmatch("[012345\n]*", map_str)
+        if match:
+            self._grid_map = []
+            row_strings = map_str.split("\n")
+            for row_string in row_strings:
+                grid_row = []
+                for char in row_string:
+                    bit = int(char)
+                    grid_row.append(bit)
+                self._grid_map.append(grid_row)
+            return True
+
+        return False
+
+    def _paint_map(self):
+        """Paint the unexplored map on the grid."""
+        for i in range(NUM_ROWS):
+            for j in range(NUM_COLS):
+                grid_num = i * ROW_LENGTH + j + 1
+                self.mark_cell(grid_num, UNEXPLORED)
+
+    def mark_cell(self, cell_index, cell_type):
+        """Mark a cell as a certain type."""
+        self._canvas.itemconfig(cell_index, fill=cell_type)
+        self.update()
+
+    def _draw_arrow(self, location, facing):
+        top_left_grid = self._canvas.coords(location)
+        x, y = top_left_grid[0], top_left_grid[1]
+
+        if facing == NORTH:
+            points = [x, y + self._grid_size, x + self._grid_size, y + self._grid_size, x + self._grid_size/2, y]
+        elif facing == SOUTH:
+            points = [x, y, x + self._grid_size, y, x + self._grid_size/2, y + self._grid_size]
+        elif facing == EAST:
+            points = [x, y, x, y + self._grid_size, x + self._grid_size, y + self._grid_size/2]
+        else:
+            points = [x + self._grid_size, y, x + self._grid_size, y + self._grid_size, x, y + self._grid_size/2]
+
+        self._canvas.create_polygon(points, fill='gold', width=3)
+
 
 def get_time_elapsed(start_time):
     """Get the elapsed time."""

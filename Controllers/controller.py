@@ -96,11 +96,6 @@ class Controller:
             enable_print()
             print('Start EXPLORATION')
             disable_print()
-        elif msg == ANDROID_AUTO_UPDATE_TRUE:
-            self._auto_update = True
-        elif msg == ANDROID_AUTO_UPDATE_FALSE:
-            self._auto_update = False
-            self._update_android(True, True, override=True)
         elif msg[0:8] == ANDROID_WAYPOINT:
             self._set_way_point(msg[8:])
         elif msg == ANDROID_MOVE_FAST_PATH:
