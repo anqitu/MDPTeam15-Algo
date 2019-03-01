@@ -1,8 +1,8 @@
 """ This module defines all the constants that are used throughout the program. """
 
 IS_DEBUG_MODE = True # enable console printout at the cost of a slower run
-IS_ARROW_SCAN = True # scan for arrows during exploration
-IS_SIMULATE_MODE = True # Whether or not the current instance is going to be for a simulated or real run.
+IS_ARROW_SCAN = False # scan for arrows during exploration
+IS_SIMULATE_MODE = False # Whether or not the current instance is going to be for a simulated or real run.
 NUM_SENSOR_READINGS = 1
 
 # Sockets
@@ -15,6 +15,7 @@ NORTH = 0
 EAST = 1
 SOUTH = 2
 WEST = 3
+CAMERA_FACING = WEST
 
 DIRECTIONS = {
     0: 'NORTH',

@@ -193,10 +193,8 @@ class Window(Frame):
         self._update_cells(updated_cells)
         self._update_android(True, True)
 
-        enable_print()
-        print('Calibrating...')
+        self._sender.send_android('Exploration Done')
         self._calibrate_after_exploration()
-        disable_print()
 
     def _set_way_point(self, coordinate):
         """
@@ -209,7 +207,7 @@ class Window(Frame):
         print('Set Waypoint: {}'.format(coordinate))
         (col, row) = literal_eval(coordinate)
         self._way_point = (row, col)
-        self._mark_way_point(get_grid_index(_way_point))
+        self._mark_way_point(get_grid_index(row, col))
         disable_print()
 
     def _calibrate(self):
@@ -371,7 +369,7 @@ class Window(Frame):
         :return: N/A
         """
         enable_print()
-        print('Calibrating...')
+        # print('Calibrating...')
         disable_print()
         self._fastest_path = self._find_fastest_path()
 
@@ -421,6 +419,7 @@ class Window(Frame):
     def _move_fastest_path(self):
         """Move the robot along the fastest path."""
         if self._fastest_path:
+            self._robot.is_fast_path = True
             # move_str = get_fastest_path_move_string(self._fastest_path)
             # enable_print()
             # print('Move String: {}'.format(move_str))

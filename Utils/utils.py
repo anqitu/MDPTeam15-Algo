@@ -137,6 +137,8 @@ def convert_obstacle_string_to_map(obstacle_string, explore_map):
 def print_map_info(robot):
     print('EXPLORE_STR:', robot.get_explore_string())
     print('MAP_STR:', robot.get_map_string())
+    print('Robot Position:', (robot.center, DIRECTIONS[robot.facing]))
+
     print('Exploration Status Map:')
     for _ in robot.exploration_status[::-1]:
         print(_)

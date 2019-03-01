@@ -198,6 +198,7 @@ class Window(Frame):
         enable_print()
         print('Exploration Done')
         disable_print()
+
         self._calibrate_after_exploration()
 
     def _calibrate_after_exploration(self):
@@ -251,6 +252,7 @@ class Window(Frame):
     def _move_fastest_path(self):
         """Move the robot along the fastest path."""
         if self._fastest_path:
+            self._robot.is_fast_path = True
             timestep = float(self._timestep_entry.get().strip())
             for move in self._fastest_path:
                 sleep(timestep)
