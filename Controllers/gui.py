@@ -201,6 +201,16 @@ class Window(Frame):
 
         self._calibrate_after_exploration()
 
+        if IS_ARROW_SCAN:
+            self._robot.postprocess_arrow_images()
+            if self._robot.arrows:
+                for y, x, facing in self._robot.arrows:
+                    self._draw_arrow(get_grid_index(y, x), facing)
+
+        enable_print()
+        print_map_info(self._robot)
+        disable_print()
+
     def _calibrate_after_exploration(self):
         """
         Post-exploration calibration to prepare the robot for the fastest path.
@@ -467,11 +477,6 @@ class Window(Frame):
                 self.mark_cell(cell, EXPLORED)
             else:
                 self.mark_cell(cell, OBSTACLE)
-
-        if IS_ARROW_SCAN:
-            arrow_cells = self._robot.arrows
-            for x, y, facing in arrow_cells:
-                self._draw_arrow(get_grid_index(y, x), facing)
 
         self._percentage_completion_label.config(text=("%.2f" % self._robot.get_completion_percentage() + "%"))
 

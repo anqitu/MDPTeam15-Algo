@@ -15,8 +15,10 @@ class Robot:
         self.facing = facing
         self.discovered_map = discovered_map
         self.real_map = real_map
-        self.arrow_map = [[[0, 0, 0, 0] for _ in range(ROW_LENGTH)] for _ in range(COL_LENGTH)]
-        self.arrows = []
+        self.arrow_taken_status = [[[0, 0, 0, 0] for _ in range(ROW_LENGTH)] for _ in range(COL_LENGTH)]
+        self.arrow_taken_positions = []
+        self.arrows = [(5, 1, 0), (5, 2, 1), (5, 3, 2), (5, 4, 3)]
+        self.arrows_arduino = []
         self.sensors = [
             #   2 3 4
             # 1       5
@@ -48,33 +50,85 @@ class Robot:
             return get_grid_index(y, x), self.discovered_map[y][x]
         return None, None
 
-    def _mark_arrow_taken(self, y, x, facing):
+    def _mark_arrow_taken(self, y, x, camera_facing):
         """
         Mark the face a cell having its picture taken by the arrow recognizer.
 
         :param y: The y-coordinate of the cell to be marked.
         :param x: The x-coordinate of the cell to be marked.
-        :param facing: The facing of the robot when the photo was taken.
+        :param camera_facing: The facing of the camera when the photo was taken.
         :return: True if success. No definition of failure provided, however it is easy to add if required.
         """
 
-        self.arrow_map[y][x][facing] = 1
-        print('Mark Arrow Taken at {}'.format((x, y, DIRECTIONS[facing])))
+        self.arrow_taken_status[y][x][camera_facing] = 1
+        print('Mark Arrow Taken at {}'.format((x, y, DIRECTIONS[camera_facing])))
 
         return True
 
-    def _mark_arrow_position(self, y, x, facing):
+    def _take_arrow_images(self, msg):
         """
         Mark position of a detected arrow
 
-        :param y: The y-coordinate of the cell to be marked.
-        :param x: The x-coordinate of the cell to be marked.
-        :param facing: The facing of the robot when the photo was taken.
+        :param msg: The y-coordinate, x-coordinate of the cell to be marked and The facing of the robot when the photo was taken.
         """
-        camera_facing = (facing + CAMERA_FACING) % 4
-        if self.real_map[19-y][x] == camera_facing + 2:
-            self.arrows.append((x, y, camera_facing))
-        print('Mark Arrow Position at {}'.format((x, y, DIRECTIONS[camera_facing])))
+        self.arrow_taken_positions.append(msg)
+        print('Take Arrow Image at {}'.format(msg))
+
+
+    def postprocess_arrow_images(self):
+        print('Start postprocessing arrow images')
+        for msg in self.arrow_taken_positions:
+            y, x, facing = tuple([int(_) for _ in msg.split(',')])
+            print('Recognizing Image taken with robot position@ {}'.format((x, y, DIRECTIONS[facing])))
+            discovered_map = self.discovered_map
+
+            camera_facing = (facing + CAMERA_FACING) % 4
+
+            try:
+                distance = 2
+                if camera_facing == WEST:
+                    new_x = x - distance
+                    if new_x < 0:
+                        raise IndexError
+                    for i, j in [(new_x, y - 1), (new_x, y), (new_x, y + 1)]:
+                        print('Check Arrow @ {}'.format((i, j, DIRECTIONS[camera_facing])))
+                        if discovered_map[j][i] == 1 and int(self.real_map[19-j][i] == camera_facing + 2) == 1:
+                            self.arrows.append((j, i, camera_facing))
+                elif camera_facing == NORTH:
+                    new_y = y + distance
+                    if new_y > 19:
+                        raise IndexError
+                    for i, j in [(x - 1, new_y), (x, new_y), (x + 1, new_y)]:
+                        print('Check Arrow @ {}'.format((i, j, DIRECTIONS[camera_facing])))
+                        if discovered_map[j][i] == 1 and int(self.real_map[19-j][i] == camera_facing + 2) == 1:
+                            self.arrows.append((j, i, camera_facing))
+                elif camera_facing == EAST:
+                    new_x = x + distance
+                    if new_x > 14:
+                        raise IndexError
+                    for i, j in [(new_x, y + 1), (new_x, y), (new_x, y - 1)]:
+                        print('Check Arrow @ {}'.format((i, j, DIRECTIONS[camera_facing])))
+                        if discovered_map[j][i] == 1 and int(self.real_map[19-j][i] == camera_facing + 2) == 1:
+                            self.arrows.append((j, i, camera_facing))
+                elif camera_facing == SOUTH:
+                    new_y = y - distance
+                    if new_y < 0:
+                        raise IndexError
+                    for i, j in [(x + 1, new_y), (x, new_y), (x - 1, new_y)]:
+                        print('Check Arrow @ {}'.format((i, j, DIRECTIONS[camera_facing])))
+                        if discovered_map[j][i] == 1 and int(self.real_map[19-j][i] == camera_facing + 2) == 1:
+                            self.arrows.append((j, i, camera_facing))
+            except IndexError:
+                continue
+
+        print('Detected Arrows @')
+        for _ in self.arrows:
+            j, i, camera_facing = _
+            print((i, j, DIRECTIONS[camera_facing]))
+            self.arrows_arduino.append(','.join([str(i), str(19-j), str(camera_facing)]))
+        print('Arduino Version:')
+        for _ in self.arrows_arduino:
+            print(_)
 
 
     def in_efficiency_limit(self):
@@ -89,7 +143,6 @@ class Robot:
                 or (self.center in E_LIMITS[SOUTH] and self.facing == WEST) \
                 or (self.center in E_LIMITS[WEST] and self.facing == NORTH):
             return True
-
         return False
 
     def mark_robot_standing(self):
@@ -140,6 +193,9 @@ class Robot:
         :param direction: The direction to turn (FORWARD, LEFT, RIGHT, BACKWARD)
         :return: N/A
         """
+        if direction == FORWARD:
+            return
+
         self.facing = (self.facing + direction) % 4
 
         if IS_ARROW_SCAN and not self.is_fast_path:
@@ -242,7 +298,7 @@ class Robot:
         arrow_range = 1
         y, x = get_matrix_coords(self.center)
         discovered_map = self.discovered_map
-        arrow_map = self.arrow_map
+        arrow_taken_status = self.arrow_taken_status
         facing = self.facing
         camera_facing = (facing + CAMERA_FACING) % 4
 
@@ -256,41 +312,37 @@ class Robot:
                     if new_x < 0:
                         raise IndexError
 
-                    for x, y in [(new_x, y), (new_x, y + 1), (new_x, y - 1)]:
-                        print('Checking %s,%s' % (x, y))
-                        if discovered_map[y][x] == 1 and not arrow_map[y][x][facing]:
-                            self._mark_arrow_taken(y, x, facing)
-                            self._mark_arrow_position(y, x, facing)
+                    for i, j in [(new_x, y - 1), (new_x, y), (new_x, y + 1)]:
+                        print('Checking %s,%s' % (i, j))
+                        if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
+                            self._mark_arrow_taken(j, i, camera_facing)
                             flag = True
                 elif camera_facing == NORTH:
                     new_y = y + distance
                     if new_y > 19:
                         raise IndexError
-                    for x, y in [(x, new_y), (x + 1, new_y), (x - 1, new_y)]:
-                        print('Checking %s,%s' % (x, y))
-                        if discovered_map[y][x] == 1 and not arrow_map[y][x][facing]:
-                            self._mark_arrow_taken(y, x, facing)
-                            self._mark_arrow_position(y, x, facing)
+                    for i, j in [(x - 1, new_y), (x, new_y), (x + 1, new_y)]:
+                        print('Checking %s,%s' % (i, j))
+                        if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
+                            self._mark_arrow_taken(j, i, camera_facing)
                             flag = True
                 elif camera_facing == EAST:
                     new_x = x + distance
                     if new_x > 14:
                         raise IndexError
-                    for x, y in [(new_x, y), (new_x, y + 1), (new_x, y - 1)]:
-                        print('Checking %s,%s' % (x, y))
-                        if discovered_map[y][x] == 1 and not arrow_map[y][x][facing]:
-                            self._mark_arrow_taken(y, x, facing)
-                            self._mark_arrow_position(y, x, facing)
+                    for i, j in [(new_x, y + 1), (new_x, y), (new_x, y - 1)]:
+                        print('Checking %s,%s' % (i, j))
+                        if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
+                            self._mark_arrow_taken(j, i, camera_facing)
                             flag = True
-                elif facing == SOUTH:
+                elif camera_facing == SOUTH:
                     new_y = y - distance
                     if new_y < 0:
                         raise IndexError
-                    for x, y in [(x, new_y), (x + 1, new_y), (x - 1, new_y)]:
-                        print('Checking %s,%s' % (x, y))
-                        if discovered_map[y][x] == 1 and not arrow_map[y][x][facing]:
-                            self._mark_arrow_taken(y, x, facing)
-                            self._mark_arrow_position(y, x, facing)
+                    for i, j in [(x + 1, new_y), (x, new_y), (x - 1, new_y)]:
+                        print('Checking %s,%s' % (i, j))
+                        if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
+                            self._mark_arrow_taken(j, i, camera_facing)
                             flag = True
             return flag
         except IndexError:
@@ -307,7 +359,8 @@ class Robot:
 
         if self.is_arrow_possible():
             print('Arrow Possible @ Robot Position: {}'.format((x, y, DIRECTIONS[self.facing])))
-
+            msg = '%s,%s,%s' % (y, x, self.facing)
+            self._take_arrow_images(msg)
         else:
             print('Arrow Not Possible @ Robot Position: {}'.format((x, y, DIRECTIONS[self.facing])))
 

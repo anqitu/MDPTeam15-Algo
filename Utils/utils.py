@@ -135,9 +135,17 @@ def convert_obstacle_string_to_map(obstacle_string, explore_map):
     return discovered_map
 
 def print_map_info(robot):
-    print('EXPLORE_STR:', robot.get_explore_string())
-    print('MAP_STR:', robot.get_map_string())
-    print('Robot Position:', (robot.center, DIRECTIONS[robot.facing]))
+    msgs = []
+    msgs.append('"exploreMap":"%s"'%robot.get_explore_string())
+    msgs.append('"obstacleMap":"%s"'%robot.get_map_string())
+    y, x = get_matrix_coords(robot.center)
+    msgs.append('"robotPosition":"%s,%s,%s"' % (str(x), str(y), str(robot.facing)))
+    msgs.append('"ARrobotPosition":"%s,%s,%s"' % (str(x), str(19 - y), str(robot.facing)))
+    if IS_ARROW_SCAN:
+        if robot.arrows_arduino:
+            msgs.append('"arrowPosition":"{}"'.format(','.join([str(value) for pos in robot.arrows for value in pos])))
+            msgs.append('"ARarrowPosition":"{}"'.format(';'.join(robot.arrows_arduino)))
+    print('{' + ','.join(msgs) + '}')
 
     print('Exploration Status Map:')
     for _ in robot.exploration_status[::-1]:
@@ -145,7 +153,8 @@ def print_map_info(robot):
     print('Discovered Map:')
     for _ in robot.discovered_map[::-1]:
         print(_)
-    print('Arrow Map:')
-    for _ in robot.arrow_map[::-1]:
-        print(_)
-    print('Arrows: {}'.format(robot.arrows))
+
+    if IS_ARROW_SCAN:
+        print('Arrow Taken Status Map:')
+        for _ in robot.arrow_taken_status[::-1]:
+            print(_)

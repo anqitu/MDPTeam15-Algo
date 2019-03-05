@@ -191,7 +191,7 @@ class Window(Frame):
         cells = [item for sublist in EXPLORATION_OBSTACLE_MAP for item in sublist]
         updated_cells = {i+1: cells[i] for i in range(len(cells))}
         self._update_cells(updated_cells)
-        self._update_android(True, True)
+        self._update_android()
 
         self._sender.send_android('Exploration Done')
         self._calibrate_after_exploration()
@@ -204,46 +204,43 @@ class Window(Frame):
         :return: N/A
         """
         enable_print()
-        print('Set Waypoint: {}'.format(coordinate))
         (col, row) = literal_eval(coordinate)
-        self._way_point = (row, col)
-        self._mark_way_point(get_grid_index(row, col))
+        self._way_point = (19 - row, col)
+        print('Set Waypoint: {}'.format(self._way_point))
+        self._mark_way_point(get_grid_index(19 - row, col))
         disable_print()
 
-    def _calibrate(self):
-        """
-        Calibrate the robot.
+    # def _calibrate(self):
+    #     """
+    #     Calibrate the robot.
+    #
+    #     :return: N/A
+    #     """
+    #     if not self._is_sim:
+    #         self._sender.send_android('{"status":"calibrating"}')
+    #         self._sender.send_arduino('z')
+    #         self._sender.wait_arduino('D')
+    #         self._robot.turn_robot(self._sender, RIGHT)
+    #         self._robot.get_sensor_readings(self._sender)
+    #         self._robot.turn_robot(self._sender, LEFT)
+    #         self._sender.send_arduino('z')
+    #         self._sender.wait_arduino('D')
+    #     self._sender.send_android('{"status":"calibrating done"}')
 
-        :return: N/A
-        """
-        if not self._is_sim:
-            self._sender.send_android('{"status":"calibrating"}')
-            self._sender.send_arduino('z')
-            self._sender.wait_arduino('D')
-            self._robot.turn_robot(self._sender, RIGHT)
-            self._robot.get_sensor_readings(self._sender)
-            self._robot.turn_robot(self._sender, LEFT)
-            self._sender.send_arduino('z')
-            self._sender.wait_arduino('D')
-        self._sender.send_android('{"status":"calibrating done"}')
-
-    def _update_android(self, is_update_map, is_update_coords):
+    def _update_android(self):
         """
         Send the latest updates to the Android device.
 
-        :param is_update_map: Whether the latest MDF string should be updated.
-        :param is_update_coords: Whether the latest coordinates and facing should be updated.
         :return: N/A
         """
         msgs = []
-        if is_update_map:
-            # Send the latest MDF strings to the Android device.
-            msgs.append('"exploreMap":"%s"'%self._robot.get_explore_string())
-            msgs.append('"obstacleMap":"%s"'%self._robot.get_map_string())
-        if is_update_coords:
-            y, x = get_matrix_coords(self._robot.center)
-            msgs.append('"robotPosition":"%s,%s,%s"' % (str(x), str(y), str(self._robot.facing)))
-            msgs.append('"robotPosition":"%s,%s,%s"' % (str(1), str(1), str(1)))
+        # Send the latest MDF strings to the Android device.
+        msgs.append('"exploreMap":"%s"'%self._robot.get_explore_string())
+        msgs.append('"obstacleMap":"%s"'%self._robot.get_map_string())
+        y, x = get_matrix_coords(self._robot.center)
+        msgs.append('"robotPosition":"%s,%s,%s"' % (str(x), str(19 - y), str(self._robot.facing)))
+        if IS_ARROW_SCAN:
+            msgs.append('"arrowPosition":"{}"'.format(';'.join(self._robot.arrows_arduino)))
 
         self._sender.send_android('{' + ','.join(msgs) + '}')
 
@@ -262,7 +259,7 @@ class Window(Frame):
 
         initial_pos = next(run)
         self._update_cells(initial_pos)
-        self._update_android(True, True)
+        self._update_android()
 
         while True:
             try:
@@ -274,7 +271,7 @@ class Window(Frame):
                     print('updated_cells (sensor_readings): {}'.format(updated_cells)) # sensor_reading
 
                     self._update_cells(updated_cells)
-                    self._update_android(True, False)
+                    self._update_android()
 
                     print_map_info(self._robot)
 
@@ -292,11 +289,11 @@ class Window(Frame):
                     elif move_or_turn == TURN:
                         self._turn_head(self._facing, direction)
 
-                    self._update_android(True, True)
+                    self._update_android()
 
                     is_complete = run.send(0)
                     if is_complete:
-                        self._update_android(True, True)
+                        self._update_android()
 
                         enable_print()
                         print_map_info(self._robot)
@@ -322,16 +319,16 @@ class Window(Frame):
 
                             if updated_or_moved == "updated":
                                 self._update_cells(value)
-                                self._update_android(True, False)
+                                self._update_android()
                             elif updated_or_moved == "moved":
                                 self._move_robot(value)
-                                self._update_android(False, True)
+                                self._update_android()
                             else:
                                 # invalid (no path find)
                                 break
 
                             if is_complete:
-                                self._update_android(True, True)
+                                self._update_android()
 
                                 enable_print()
                                 print_map_info(self._robot)
@@ -349,7 +346,7 @@ class Window(Frame):
                         sleep(self._timestep)
 
                     self._move_robot(direction)
-                    self._update_android(False, True)
+                    self._update_android()
 
             except StopIteration:
                 print_map_info(self._robot)
@@ -361,6 +358,18 @@ class Window(Frame):
 
         self._sender.send_android('Exploration Done')
         self._calibrate_after_exploration()
+
+        if IS_ARROW_SCAN:
+            self._sender.send_android('Start processing image recognition')
+            self._robot.postprocess_arrow_images()
+            if self._robot.arrows:
+                for y, x, facing in self._robot.arrows:
+                    self._draw_arrow(get_grid_index(y, x), facing)
+
+        self._update_android()
+        enable_print()
+        print_map_info(self._robot)
+        disable_print()
 
     def _calibrate_after_exploration(self):
         """
@@ -384,7 +393,7 @@ class Window(Frame):
         #     self._turn_head(self._facing, self._fastest_path[0])
         #
         # self._fastest_path[0] = FORWARD
-        # self._update_android(False, True)
+        # self._update_android()
         # self._sender.send_android('Calibrating Done')
         #
         # enable_print()
@@ -431,7 +440,7 @@ class Window(Frame):
                     sleep(timestep)
                     self._robot.move_robot(move)
                     self._move_robot(move)
-                    self._update_android(False, True)
+                    self._update_android()
             else:
                 # move_str = get_fastest_path_move_string(self._fastest_path)
                 # self._sender.send_arduino(move_str)
@@ -444,7 +453,7 @@ class Window(Frame):
                 for move in self._fastest_path:
                     self._robot.move_robot(self._sender, move)
                     self._move_robot(move)
-                    self._update_android(False, True)
+                    self._update_android()
 
             self._sender.send_android('Reached GOAL!')
 
@@ -655,11 +664,6 @@ class Window(Frame):
                 self.mark_cell(cell, EXPLORED)
             else:
                 self.mark_cell(cell, OBSTACLE)
-
-        if IS_ARROW_SCAN:
-            arrow_cells = self._robot.arrows
-            for x, y, facing in arrow_cells:
-                self._draw_arrow(get_grid_index(y, x), facing)
 
         self._percentage_completion_label.config(text=("%.2f" % self._robot.get_completion_percentage() + "%"))
 
