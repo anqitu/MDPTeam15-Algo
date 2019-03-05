@@ -202,7 +202,7 @@ class Window(Frame):
         self._calibrate_after_exploration()
 
         if IS_ARROW_SCAN:
-            self._robot.postprocess_arrow_images()
+            # self._robot.postprocess_arrow_images()
             if self._robot.arrows:
                 for y, x, facing in self._robot.arrows:
                     self._draw_arrow(get_grid_index(y, x), facing)
@@ -477,6 +477,10 @@ class Window(Frame):
                 self.mark_cell(cell, EXPLORED)
             else:
                 self.mark_cell(cell, OBSTACLE)
+
+        if IS_ARROW_SCAN:
+            for y, x, facing in self._robot.arrows:
+                self._draw_arrow(get_grid_index(y, x), facing)
 
         self._percentage_completion_label.config(text=("%.2f" % self._robot.get_completion_percentage() + "%"))
 

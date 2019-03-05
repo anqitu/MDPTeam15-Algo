@@ -41,7 +41,6 @@ class Message_Handler:
                 disable_print()
                 break
 
-            # 'P{"status":"explore done"}P{"status":"explore done"}'
             if data.startswith('RP'):
                 data = data.split('RP')
                 data[:] = [x for x in data if x != '']

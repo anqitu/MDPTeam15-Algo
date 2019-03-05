@@ -2,13 +2,13 @@
 
 IS_DEBUG_MODE = True # enable console printout at the cost of a slower run
 IS_ARROW_SCAN = True # scan for arrows during exploration
-IS_SIMULATE_MODE = True # Whether or not the current instance is going to be for a simulated or real run.
+IS_SIMULATE_MODE = False # Whether or not the current instance is going to be for a simulated or real run.
 NUM_SENSOR_READINGS = 1
 
 # Sockets
 # WIFI_HOST = '192.168.15.15'
 WIFI_HOST = '127.0.0.1'
-RPI_PORT = 5556
+RPI_PORT = 6688
 
 # Directions
 NORTH = 0
@@ -141,7 +141,7 @@ ARDUINO_TURN_TO_BACKWARD = 'S'
 ARDUIMO_MOVED = 'M'
 
 # RPi
-API_TAKEN_PHOTO = 'T'
+API_TAKEN_PHOTO = 'I'
 
 EXPLORE_STATUS_MAP = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                       [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],

@@ -193,7 +193,6 @@ class Window(Frame):
         self._update_cells(updated_cells)
         self._update_android()
 
-        self._sender.send_android('Exploration Done')
         self._calibrate_after_exploration()
 
     def _set_way_point(self, coordinate):
@@ -217,7 +216,6 @@ class Window(Frame):
     #     :return: N/A
     #     """
     #     if not self._is_sim:
-    #         self._sender.send_android('{"status":"calibrating"}')
     #         self._sender.send_arduino('z')
     #         self._sender.wait_arduino('D')
     #         self._robot.turn_robot(self._sender, RIGHT)
@@ -225,7 +223,6 @@ class Window(Frame):
     #         self._robot.turn_robot(self._sender, LEFT)
     #         self._sender.send_arduino('z')
     #         self._sender.wait_arduino('D')
-    #     self._sender.send_android('{"status":"calibrating done"}')
 
     def _update_android(self):
         """
@@ -356,12 +353,10 @@ class Window(Frame):
         print('Exploration Done')
         disable_print()
 
-        self._sender.send_android('Exploration Done')
         self._calibrate_after_exploration()
 
         if IS_ARROW_SCAN:
-            self._sender.send_android('Start processing image recognition')
-            self._robot.postprocess_arrow_images()
+            # self._robot.postprocess_arrow_images()
             if self._robot.arrows:
                 for y, x, facing in self._robot.arrows:
                     self._draw_arrow(get_grid_index(y, x), facing)
@@ -394,7 +389,6 @@ class Window(Frame):
         #
         # self._fastest_path[0] = FORWARD
         # self._update_android()
-        # self._sender.send_android('Calibrating Done')
         #
         # enable_print()
         # print('Calibrating Done!')
@@ -446,7 +440,7 @@ class Window(Frame):
                 # self._sender.send_arduino(move_str)
                 #
                 # for move in move_str:
-                #     self._sender.wait_arduino('M')
+                #     self._sender.wait_arduino(ARDUIMO_MOVED)
                 #     self._robot.move_robot(self._sender, convert_arduino_cmd_to_direction(move))
                 #     self._move_robot(convert_arduino_cmd_to_direction(move))
                 #     self._update_android(False, True)
@@ -454,8 +448,6 @@ class Window(Frame):
                     self._robot.move_robot(self._sender, move)
                     self._move_robot(move)
                     self._update_android()
-
-            self._sender.send_android('Reached GOAL!')
 
             enable_print()
             print('Reached GOAL!')
@@ -664,6 +656,10 @@ class Window(Frame):
                 self.mark_cell(cell, EXPLORED)
             else:
                 self.mark_cell(cell, OBSTACLE)
+
+        if IS_ARROW_SCAN:
+            for y, x, facing in self._robot.arrows:
+                self._draw_arrow(get_grid_index(y, x), facing)
 
         self._percentage_completion_label.config(text=("%.2f" % self._robot.get_completion_percentage() + "%"))
 
