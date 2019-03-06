@@ -33,12 +33,12 @@ class Robot:
             # 1       5
             # 0
             #
-            {"mount_loc": WS, "facing": WEST, "range": 2, "blind_spot": 0},
-            {"mount_loc": NWS, "facing": WEST, "range": 2, "blind_spot": 0},
-            {"mount_loc": NWS, "facing": NORTH, "range": 4, "blind_spot": 0},
-            {"mount_loc": NS, "facing": NORTH, "range": 2, "blind_spot": 0},
-            {"mount_loc": NES, "facing": NORTH, "range": 2, "blind_spot": 0},
-            {"mount_loc": NES, "facing": EAST, "range": 4, "blind_spot": 0}
+            {"mount_loc": WS, "facing": WEST, "range": 3, "blind_spot": 0},
+            {"mount_loc": NWS, "facing": WEST, "range": 3, "blind_spot": 0},
+            {"mount_loc": NWS, "facing": NORTH, "range": 3, "blind_spot": 0},
+            {"mount_loc": NS, "facing": NORTH, "range": 3, "blind_spot": 0},
+            {"mount_loc": NES, "facing": NORTH, "range": 3, "blind_spot": 0},
+            {"mount_loc": NES, "facing": EAST, "range": 6, "blind_spot": 3}
         ]
 
         regex_str = '^(\d,){%s}$' % (len(self.sensors) * NUM_SENSOR_READINGS)
@@ -72,7 +72,7 @@ class Robot:
 
         prob_obstacle = self.probability_map[y][x][0]
         prob_total = self.probability_map[y][x][1]
-        value = int(prob_obstacle / prob_total > 0.5)
+        value = int(prob_obstacle / prob_total >= 0.5)
 
         print('Cumulative Sesnsor Reading: x, y, prob_obstacle, prob_total: {}'.format((x, y, prob_obstacle, prob_total)))
 
@@ -491,11 +491,12 @@ class Robot:
 
         readings = [int(x) for x in readings]
 
-        # split readings list into len(sensors)-sized chunks
-        readings = [readings[i:i + len(self.sensors)] for i in range(0, len(readings), len(self.sensors))]
-
-        # transpose list so that each row is the list of readings for that sensor
-        readings = [[row[i] for row in readings] for i, _ in enumerate(readings[0])]
+        # # split readings list into len(sensors)-sized chunks
+        # readings = [readings[i:i + 6] for i in range(0, len(readings), 6)]
+        # readings = [readings[i:i + len(self.sensors)] for i in range(0, len(readings), len(self.sensors))]
+        #
+        # # transpose list so that each row is the list of readings for that sensor
+        # readings = [[row[i] for row in readings] for i, _ in enumerate(readings[0])]
 
         robot_cells = get_robot_cells(self.center)
         sensors = self.sensors[:]
@@ -531,42 +532,90 @@ class Robot:
                 origin = robot_cells[4]
 
             y, x = get_matrix_coords(origin)
+            cover_range = list(range(1, sensor["range"] + 1))
             read_range = list(range(sensor["blind_spot"] + 1, sensor["range"] + 1))
+            blind_range = list(range(1, sensor["blind_spot"] + 1))
 
             reading = readings[sensor_index(sensor)]
             print('Sensor', sensor_index(sensor))
 
-            weight = 4
-            # [1, 2] or [1, 2, 3, 4]
-            for cell in read_range:
-                try:
-                    if true_facing == NORTH:
-                        to_explore = (y + cell, x)
-                    elif true_facing == EAST:
-                        to_explore = (y, x + cell)
-                    elif true_facing == SOUTH:
-                        to_explore = (y - cell, x)
-                    elif true_facing == WEST:
-                        to_explore = (y, x - cell)
+            # weight = 4
 
-                    if to_explore[0] < 0 or to_explore[1] < 0:
-                        print('ie')
-                        raise IndexError
+            # If reading is 0, means no obstacle in the covered range
+            if reading == 0:
+                print('No Obstacle in Covered Range')
+                for cell in cover_range:
+                    try:
+                        if true_facing == NORTH:
+                            to_explore = (y + cell, x)
+                        elif true_facing == EAST:
+                            to_explore = (y, x + cell)
+                        elif true_facing == SOUTH:
+                            to_explore = (y - cell, x)
+                        elif true_facing == WEST:
+                            to_explore = (y, x - cell)
 
-                    cell_index = get_grid_index(to_explore[0], to_explore[1])
+                        if to_explore[0] < 0 or to_explore[0] > 19 or to_explore[1] < 0 or to_explore[1] > 14:
+                            print('ie')
+                            raise IndexError
 
-                    updated_cell, value = self._mark_probability(cell_index, weight * reading.count(cell), weight * NUM_SENSOR_READINGS)
-                    if updated_cell is not None:
-                        updated_cells[updated_cell] = value
+                        cell_index = get_grid_index(to_explore[0], to_explore[1])
 
-                    if self.discovered_map[to_explore[0]][to_explore[1]] == 1:
-                        raise IndexError
+                        updated_cell, value = self._mark_probability(cell_index, 0, NUM_SENSOR_READINGS)
+                        if updated_cell is not None:
+                            updated_cells[updated_cell] = value
+                    except IndexError:
+                        break
+                print('br')
 
-                    weight /= 2
+            # if reading in the read range, mark cells as 0 until the obstacle cell
+            elif reading in read_range:
+                print('Has Obstacle in Covered Range')
+                for cell in read_range:
+                    try:
+                        if true_facing == NORTH:
+                            to_explore = (y + cell, x)
+                        elif true_facing == EAST:
+                            to_explore = (y, x + cell)
+                        elif true_facing == SOUTH:
+                            to_explore = (y - cell, x)
+                        elif true_facing == WEST:
+                            to_explore = (y, x - cell)
 
-                except IndexError:
-                    break
-            print('br')
+                        if to_explore[0] < 0 or to_explore[0] > 19 or to_explore[1] < 0 or to_explore[1] > 14:
+                            print('ie')
+                            raise IndexError
+
+                        cell_index = get_grid_index(to_explore[0], to_explore[1])
+
+                        updated_cell, value = self._mark_probability(cell_index, int(reading == cell), NUM_SENSOR_READINGS)
+                        if updated_cell is not None:
+                            updated_cells[updated_cell] = value
+
+                        # If the current cell is the one with obstacle, mark all cells in blind range as 0 and break the loop
+                        if self.discovered_map[to_explore[0]][to_explore[1]] == 1:
+                            for cell in blind_range:
+                                if true_facing == NORTH:
+                                    to_explore = (y + cell, x)
+                                elif true_facing == EAST:
+                                    to_explore = (y, x + cell)
+                                elif true_facing == SOUTH:
+                                    to_explore = (y - cell, x)
+                                elif true_facing == WEST:
+                                    to_explore = (y, x - cell)
+                                cell_index = get_grid_index(to_explore[0], to_explore[1])
+                                updated_cell, value = self._mark_probability(cell_index, 0, NUM_SENSOR_READINGS)
+                                if updated_cell is not None:
+                                    updated_cells[updated_cell] = value
+
+                            raise IndexError
+                        # weight /= 2
+                    except IndexError:
+                        break
+                print('br')
+
+            else:
+                print('Unacceptable Reading')
         return updated_cells
 
     def get_explore_string(self):

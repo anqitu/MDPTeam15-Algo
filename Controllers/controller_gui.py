@@ -92,9 +92,12 @@ class Window(Frame):
         self._auto_update = True
 
         print('Init complete!')
-        self._sender.send_rpi("Hello from PC to RPi\n")
-        self._sender.send_arduino("Hello from PC to Arduino\n")
-        self._sender.send_android("Hello from PC to Android\n")
+        self._sender.send_rpi("Hello from PC to RPi")
+        # for i in range(100):
+        #     self._sender.send_rpi("I")
+        #     sleep(2)
+        self._sender.send_arduino("Hello from PC to Arduino")
+        self._sender.send_android("Hello from PC to Android")
 
         self._facing = self._robot.facing
         self._draw_robot(START, self._facing)

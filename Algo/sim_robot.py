@@ -24,12 +24,12 @@ class Robot:
             # 1       5
             # 0
             #
-            {"mount_loc": NWS, "facing": WEST, "range": 2, "blind_spot": 0},
-            {"mount_loc": WS, "facing": WEST, "range": 2, "blind_spot": 0},
-            {"mount_loc": NWS, "facing": NORTH, "range": 4, "blind_spot": 0},
-            {"mount_loc": NS, "facing": NORTH, "range": 2, "blind_spot": 0},
-            {"mount_loc": NES, "facing": NORTH, "range": 2, "blind_spot": 0},
-            {"mount_loc": NES, "facing": EAST, "range": 4, "blind_spot": 0}
+            {"mount_loc": WS, "facing": WEST, "range": 3, "blind_spot": 0},
+            {"mount_loc": NWS, "facing": WEST, "range": 3, "blind_spot": 0},
+            {"mount_loc": NWS, "facing": NORTH, "range": 3, "blind_spot": 0},
+            {"mount_loc": NS, "facing": NORTH, "range": 3, "blind_spot": 0},
+            {"mount_loc": NES, "facing": NORTH, "range": 3, "blind_spot": 0},
+            {"mount_loc": NES, "facing": EAST, "range": 6, "blind_spot": 0}
         ]
 
     def _mark_explored(self, cell_index):
@@ -415,7 +415,7 @@ class Robot:
                     elif true_facing == WEST:
                         to_explore = (y, x - cell)
 
-                    if to_explore[0] < 0 or to_explore[1] < 0:
+                    if to_explore[0] < 0 or to_explore[0] > 19 or to_explore[1] < 0 or to_explore[1] > 14:
                         print('ie')
                         raise IndexError
 
