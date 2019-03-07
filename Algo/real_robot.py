@@ -41,7 +41,7 @@ class Robot:
             {"mount_loc": NES, "facing": EAST, "range": 6, "blind_spot": 3}
         ]
 
-        regex_str = '^(\d,){%s}$' % (len(self.sensors) * NUM_SENSOR_READINGS)
+        regex_str = '^(\d*,){%s}$' % (len(self.sensors) * 1)
         self._readings_regex_arduino = re.compile(regex_str)
 
         regex_str = '[01]{2}'
@@ -198,8 +198,6 @@ class Robot:
         except IndexError:
             return
 
-
-
     # def postprocess_arrow_images(self):
     #     print('Start postprocessing arrow images')
     #     print('TODO......')
@@ -299,10 +297,13 @@ class Robot:
         :param direction: The direction to move (FORWARD, LEFT, RIGHT, BACKWARD)
         :return: Any cells that the robot has stepped on that it had not yet before.
         """
-        self.turn_robot(sender, direction)
+        command = ''
+        if direction!= FORWARD:
+            command += get_arduino_cmd(direction)
+        command += get_arduino_cmd(FORWARD)
+        sender.send_arduino(command)
 
-        sender.send_arduino(get_arduino_cmd(FORWARD))
-
+        self.facing = (self.facing + direction) % 4
         if self.facing == NORTH:
             self.center += ROW_LENGTH
         elif self.facing == EAST:
@@ -315,11 +316,32 @@ class Robot:
         updated_cells = self.mark_robot_standing()
 
         sender.wait_arduino(ARDUIMO_MOVED)
+        if direction!= FORWARD:
+            sender.wait_arduino(ARDUIMO_MOVED)
 
         if IS_ARROW_SCAN and not self.is_fast_path:
             self.check_arrow(sender)
 
         return updated_cells
+
+    def move_robot_algo(self, direction):
+        """
+        Turn the algo robot in a chosen direction or forward it
+
+        :param direction: The direction to turn (FORWARD, LEFT, RIGHT, BACKWARD)
+        :return: Nothing. Stops the method if the direction is FORWARD to save time as the robot does not need to turn.
+        """
+        if direction == FORWARD:
+            if self.facing == NORTH:
+                self.center += ROW_LENGTH
+            elif self.facing == EAST:
+                self.center += 1
+            elif self.facing == SOUTH:
+                self.center -= ROW_LENGTH
+            elif self.facing == WEST:
+                self.center -= 1
+        else:
+            self.facing = (self.facing + direction) % 4
 
     def check_free(self, direction):
         """
@@ -467,14 +489,6 @@ class Robot:
         """
         Send a message to the Arduino to take sensor readings.
 
-
-        The Arduino will take 11 readings from its sensors and return the distance at which it detects an obstacle
-        for each sensor. 0 indicates no obstacle detected.
-
-        The readings are split into a list of lists such that each inner list is one reading taken from each sensor.
-        The resulting matrix is then transposed such that each inner list is now all readings taken from one
-        sensor.
-
         The sensors are iterated through and the number of times a cell is detected as an obstacle is added to its
         running count. The total number of scans the cell has received is added to its running count of scans.
 
@@ -490,13 +504,6 @@ class Robot:
         del readings[-1]
 
         readings = [int(x) for x in readings]
-
-        # # split readings list into len(sensors)-sized chunks
-        # readings = [readings[i:i + 6] for i in range(0, len(readings), 6)]
-        # readings = [readings[i:i + len(self.sensors)] for i in range(0, len(readings), len(self.sensors))]
-        #
-        # # transpose list so that each row is the list of readings for that sensor
-        # readings = [[row[i] for row in readings] for i, _ in enumerate(readings[0])]
 
         robot_cells = get_robot_cells(self.center)
         sensors = self.sensors[:]
@@ -539,10 +546,10 @@ class Robot:
             reading = readings[sensor_index(sensor)]
             print('Sensor', sensor_index(sensor))
 
-            # weight = 4
+            weight = 4
 
             # If reading is 0, means no obstacle in the covered range
-            if reading == 0:
+            if reading == 0 or reading > sensor['range']:
                 print('No Obstacle in Covered Range')
                 for cell in cover_range:
                     try:
@@ -561,9 +568,12 @@ class Robot:
 
                         cell_index = get_grid_index(to_explore[0], to_explore[1])
 
-                        updated_cell, value = self._mark_probability(cell_index, 0, NUM_SENSOR_READINGS)
+                        updated_cell, value = self._mark_probability(cell_index, 0 * weight, 1 * weight)
                         if updated_cell is not None:
                             updated_cells[updated_cell] = value
+
+                        weight = max(weight/2, 1)
+
                     except IndexError:
                         break
                 print('br')
@@ -571,6 +581,31 @@ class Robot:
             # if reading in the read range, mark cells as 0 until the obstacle cell
             elif reading in read_range:
                 print('Has Obstacle in Covered Range')
+
+                # If the robot is able to observe onstacle in covered range, there is no obstacle in the blind spot.
+                for cell in blind_range:
+                    try:
+                        if true_facing == NORTH:
+                            to_explore = (y + cell, x)
+                        elif true_facing == EAST:
+                            to_explore = (y, x + cell)
+                        elif true_facing == SOUTH:
+                            to_explore = (y - cell, x)
+                        elif true_facing == WEST:
+                            to_explore = (y, x - cell)
+
+                        if to_explore[0] < 0 or to_explore[0] > 19 or to_explore[1] < 0 or to_explore[1] > 14:
+                            print('ie')
+                            raise IndexError
+
+                        cell_index = get_grid_index(to_explore[0], to_explore[1])
+                        updated_cell, value = self._mark_probability(cell_index, 0, 1 * weight)
+                        if updated_cell is not None:
+                            updated_cells[updated_cell] = value
+                    except IndexError:
+                        break
+
+                # Check for cells in read range
                 for cell in read_range:
                     try:
                         if true_facing == NORTH:
@@ -588,28 +623,16 @@ class Robot:
 
                         cell_index = get_grid_index(to_explore[0], to_explore[1])
 
-                        updated_cell, value = self._mark_probability(cell_index, int(reading == cell), NUM_SENSOR_READINGS)
+                        updated_cell, value = self._mark_probability(cell_index, int(reading == cell) * weight, 1 * weight)
                         if updated_cell is not None:
                             updated_cells[updated_cell] = value
 
-                        # If the current cell is the one with obstacle, mark all cells in blind range as 0 and break the loop
+                        # If the current cell is the one with obstacle, break the loop
                         if self.discovered_map[to_explore[0]][to_explore[1]] == 1:
-                            for cell in blind_range:
-                                if true_facing == NORTH:
-                                    to_explore = (y + cell, x)
-                                elif true_facing == EAST:
-                                    to_explore = (y, x + cell)
-                                elif true_facing == SOUTH:
-                                    to_explore = (y - cell, x)
-                                elif true_facing == WEST:
-                                    to_explore = (y, x - cell)
-                                cell_index = get_grid_index(to_explore[0], to_explore[1])
-                                updated_cell, value = self._mark_probability(cell_index, 0, NUM_SENSOR_READINGS)
-                                if updated_cell is not None:
-                                    updated_cells[updated_cell] = value
-
                             raise IndexError
-                        # weight /= 2
+
+                        weight /= 2
+
                     except IndexError:
                         break
                 print('br')

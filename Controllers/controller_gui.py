@@ -95,12 +95,26 @@ class Window(Frame):
         self._sender.send_rpi("Hello from PC to RPi")
         # for i in range(100):
         #     self._sender.send_rpi("I")
-        #     sleep(2)
+        #     sleep(4)
         self._sender.send_arduino("Hello from PC to Arduino")
         self._sender.send_android("Hello from PC to Android")
 
         self._facing = self._robot.facing
         self._draw_robot(START, self._facing)
+
+        # # For debug: Exploration without Android
+        # self._load_explore_map()
+        # thread = threading.Thread(target=self._explore)
+        # thread.daemon = True
+        # thread.start()
+        # enable_print()
+        # print('Start EXPLORATION')
+        # disable_print()
+
+        # # For debug: Fast Path without Android
+        # sleep(5)
+        # moves = [0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 1, -1, 0, 0, 1, 0, 0, 0]
+
 
         disable_print()
 
@@ -281,6 +295,9 @@ class Window(Frame):
                     if self._is_sim:
                         sleep(self._timestep)
 
+                    if IS_SLEEP:
+                        sleep(4)
+
                     self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
                     self._update_cells(updated_cells)
 
@@ -313,6 +330,8 @@ class Window(Frame):
                             updated_or_moved, value, is_complete = run.send(0)
                             if self._is_sim:
                                 sleep(self._timestep)
+                            if IS_SLEEP:
+                                sleep(4)
 
                             self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
                             print_map_info(self._robot)
@@ -344,6 +363,8 @@ class Window(Frame):
                     direction = run.send(0)
                     if self._is_sim:
                         sleep(self._timestep)
+                    if IS_SLEEP:
+                        sleep(4)
 
                     self._move_robot(direction)
                     self._update_android()
@@ -426,31 +447,38 @@ class Window(Frame):
         """Move the robot along the fastest path."""
         if self._fastest_path:
             self._robot.is_fast_path = True
-            # move_str = get_fastest_path_move_string(self._fastest_path)
-            # enable_print()
-            # print('Move String: {}'.format(move_str))
-            # disable_print()
+            move_strs = get_fastest_path_move_strs(self._fastest_path)
+            enable_print()
+            print('Move String: {}'.format(move_strs))
+            disable_print()
 
             if self._is_sim:
-                timestep = self._timestep
-                for move in self._fastest_path:
-                    sleep(timestep)
-                    self._robot.move_robot(move)
-                    self._move_robot(move)
-                    self._update_android()
+                move_strs = get_fastest_path_move_strs(self._fastest_path)
+                for move_str in move_strs:
+                    self._sender.send_arduino(move_str)
+
+                    for cmd in move_str:
+                        sleep(self._timestep)
+                        self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
+                        if convert_arduino_cmd_to_direction(cmd) == FORWARD:
+                            self._move_robot(convert_arduino_cmd_to_direction(cmd))
+                        else:
+                            self._turn_head(self._facing, convert_arduino_cmd_to_direction(cmd))
+                        self._update_android()
+
             else:
-                # move_str = get_fastest_path_move_string(self._fastest_path)
-                # self._sender.send_arduino(move_str)
-                #
-                # for move in move_str:
-                #     self._sender.wait_arduino(ARDUIMO_MOVED)
-                #     self._robot.move_robot(self._sender, convert_arduino_cmd_to_direction(move))
-                #     self._move_robot(convert_arduino_cmd_to_direction(move))
-                #     self._update_android(False, True)
-                for move in self._fastest_path:
-                    self._robot.move_robot(self._sender, move)
-                    self._move_robot(move)
-                    self._update_android()
+                move_strs = get_fastest_path_move_strs(self._fastest_path)
+                for move_str in move_strs:
+                    self._sender.send_arduino(move_str)
+
+                    for cmd in move_str:
+                        self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
+                        if convert_arduino_cmd_to_direction(cmd) == FORWARD:
+                            self._move_robot(convert_arduino_cmd_to_direction(cmd))
+                        else:
+                            self._turn_head(self._facing, convert_arduino_cmd_to_direction(cmd))
+                        self._sender.wait_arduino(ARDUIMO_MOVED)
+                        self._update_android()
 
             enable_print()
             print('Reached GOAL!')

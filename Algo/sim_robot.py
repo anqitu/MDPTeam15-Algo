@@ -14,11 +14,12 @@ class Robot:
         self.center = START
         self.facing = facing
         self.discovered_map = discovered_map
-        self.real_map = real_map
+        self.probability_map = [[[0.0, 0.0] for _ in range(ROW_LENGTH)] for _ in range(COL_LENGTH)]
         self.arrow_taken_status = [[[0, 0, 0, 0] for _ in range(ROW_LENGTH)] for _ in range(COL_LENGTH)]
         self.arrow_taken_positions = []
         self.arrows = []
         self.arrows_arduino = []
+        self.arrows_results = []
         self.sensors = [
             #   2 3 4
             # 1       5
@@ -31,24 +32,84 @@ class Robot:
             {"mount_loc": NES, "facing": NORTH, "range": 3, "blind_spot": 0},
             {"mount_loc": NES, "facing": EAST, "range": 6, "blind_spot": 0}
         ]
+        self.real_map = real_map
 
-    def _mark_explored(self, cell_index):
+    def _mark_probability(self, cell, count, total):
         """
-        Discover the cell if it is not already explored.
-        Update exploration status as 1
-        Set the cell in discovered_map as the one in real_map
+        Mark the probability of a cell being an obstacle.
 
-        :param cell_index: cell index.
-        :return: N/A
+        If the cell has > 50% chance of being an obstacle, mark the cell as
+        an obstacle. Ignore cells that have been marked as guaranteed non-obstacles.
+
+        :param cell: The number of the cell being marked.
+        :param count: The number of times the cell was flagged as an obstacle when this method was called.
+        :param total: The number of times the cell was scanned when this method was called.
+        :return: Nothing if the cell is marked 100% non-obstacle. The new value of the cell otherwise.
         """
-        y, x = get_matrix_coords(cell_index)
+        y, x = get_matrix_coords(cell)
+        print('Current Sesnsor Reading: x, y, count, total: {}'.format((x, y, count, total)))
 
-        # if exploration_status not 0
+        if self.probability_map[y][x][0] == 1.0 and self.probability_map[y][x][1] == 0.0:
+            print('perm')
+            return None, None
+
+        # Update counts
+        self.probability_map[y][x][0] += count
+        self.probability_map[y][x][1] += total
+
+        prob_obstacle = self.probability_map[y][x][0]
+        prob_total = self.probability_map[y][x][1]
+        value = int(prob_obstacle / prob_total >= 0.5)
+
+        print('Cumulative Sesnsor Reading: x, y, prob_obstacle, prob_total: {}'.format((x, y, prob_obstacle, prob_total)))
+
         if not self.exploration_status[y][x]:
             self.exploration_status[y][x] = 1
-            self.discovered_map[y][x] = int(self.real_map[19 - y][x] != 0)
-            return get_grid_index(y, x), self.discovered_map[y][x]
+
+        if self.discovered_map[y][x] != value:
+            self.discovered_map[y][x] = value
+            return get_grid_index(y, x), int(prob_obstacle / prob_total > 0.5)
+
         return None, None
+
+    def _mark_permanent(self, cell):
+        """
+        Mark a cell as a guaranteed non-obstacle.
+
+        Called when the robot walks over a cell.
+
+        :param cell: The number of the cell being marked.
+        :return: True if success. No definition of failure provided, however it is easy to add if required.
+        """
+        y, x = get_matrix_coords(cell)
+
+        self.probability_map[y][x][0] = 1.0
+        self.probability_map[y][x][1] = 0.0
+
+        if not self.exploration_status[y][x]:
+            self.exploration_status[y][x] = 1
+
+        self.discovered_map[y][x] = 0
+
+        return True
+
+    # def _mark_explored(self, cell_index):
+    #     """
+    #     Discover the cell if it is not already explored.
+    #     Update exploration status as 1
+    #     Set the cell in discovered_map as the one in real_map
+    #
+    #     :param cell_index: cell index.
+    #     :return: N/A
+    #     """
+    #     y, x = get_matrix_coords(cell_index)
+    #
+    #     # if exploration_status not 0
+    #     if not self.exploration_status[y][x]:
+    #         self.exploration_status[y][x] = 1
+    #         self.discovered_map[y][x] = int(self.real_map[19 - y][x] != 0)
+    #         return get_grid_index(y, x), self.discovered_map[y][x]
+    #     return None, None
 
     def _mark_arrow_taken(self, y, x, camera_facing):
         """
@@ -143,17 +204,15 @@ class Robot:
 
     def mark_robot_standing(self):
         """
-        Mark the area the robot is standing on as explored
+        Mark the area the robot is standing on as explored and guaranteed non-obstacles.
 
-        :return: N/A
+        :return: The cells that were updated.
         """
         robot_cells = get_robot_cells(self.center)
         updated_cells = {}
         for cell in robot_cells:
-            # grid index, 0/1
-            updated_cell, value = self._mark_explored(cell)
-            if updated_cell is not None:
-                updated_cells[updated_cell] = value
+            if self._mark_permanent(cell):
+                updated_cells[cell] = 0
 
         return updated_cells
 
@@ -221,6 +280,25 @@ class Robot:
             self.check_arrow()
 
         return updated_cells
+
+    def move_robot_algo(self, direction):
+        """
+        Turn the algo robot in a chosen direction or forward it
+
+        :param direction: The direction to turn (FORWARD, LEFT, RIGHT, BACKWARD)
+        :return: Nothing. Stops the method if the direction is FORWARD to save time as the robot does not need to turn.
+        """
+        if direction == FORWARD:
+            if self.facing == NORTH:
+                self.center += ROW_LENGTH
+            elif self.facing == EAST:
+                self.center += 1
+            elif self.facing == SOUTH:
+                self.center -= ROW_LENGTH
+            elif self.facing == WEST:
+                self.center -= 1
+        else:
+            self.facing = (self.facing + direction) % 4
 
     def check_free(self, direction):
         """
@@ -360,18 +438,18 @@ class Robot:
         else:
             print('Arrow Not Possible @ Robot Position: {}'.format((x, y, DIRECTIONS[self.facing])))
 
-
-    def get_sensor_readings(self):
+    def return_sensor_readings(self):
         """
         Get simulated sensor readings by comparing the cells that are to be explored
         by the virtual sensors against the map provided.
-        Also mark the cells in sensors' range as explored.
-
-        :return: The updated cell values and indexes.
         """
-        updated_cells = {}
+        print('Return Sensor Readings...')
+        readings = [0] * 6
+        sensors = self.sensors[:]
+        sensor_index = sensors.index
 
         for sensor in self.sensors:
+            print('Sensor', sensor_index(sensor))
             true_facing = (sensor["facing"] + self.facing) % 4
 
             if sensor["mount_loc"] != CS:
@@ -402,9 +480,9 @@ class Robot:
                 origin = robot_cells[4]
 
             y, x = get_matrix_coords(origin)
-            read_range = list(range(sensor["blind_spot"] + 1, sensor["range"] + 1))
+            cover_range = list(range(1, sensor["range"] + 1))
 
-            for cell in read_range:
+            for cell in cover_range:
                 try:
                     if true_facing == NORTH:
                         to_explore = (y + cell, x)
@@ -416,22 +494,173 @@ class Robot:
                         to_explore = (y, x - cell)
 
                     if to_explore[0] < 0 or to_explore[0] > 19 or to_explore[1] < 0 or to_explore[1] > 14:
+                        readings[sensor_index(sensor)] = cell
                         print('ie')
                         raise IndexError
 
-                    cell_index = get_grid_index(to_explore[0], to_explore[1])
-
-                    # grid index, 0/1
-                    updated_cell, value = self._mark_explored(cell_index)
-                    if updated_cell is not None:
-                        updated_cells[updated_cell] = value
-
-                    if self.discovered_map[to_explore[0]][to_explore[1]] == 1:
+                    if self.real_map[19 - to_explore[0]][to_explore[1]] != 0:
+                        print('Obstacle @ Cell {}'.format(cell))
+                        readings[sensor_index(sensor)] = cell
                         raise IndexError
 
                 except IndexError:
                     break
+        readings = ','.join([str(reading) for reading in readings]) + ','
+        print(readings)
+        return readings
 
+    def get_sensor_readings(self):
+        """
+        Send a message to the Arduino to take sensor readings.
+
+        The sensors are iterated through and the number of times a cell is detected as an obstacle is added to its
+        running count. The total number of scans the cell has received is added to its running count of scans.
+
+        The counts are weighted by distance, with the weight halving for every unit further away from the robot that
+        the reading is taken.
+
+        :return: The updated cell values and indexes.
+        """
+        readings = self.return_sensor_readings()
+        readings = readings.split(',')
+        del readings[-1]
+
+        readings = [int(x) for x in readings]
+
+        robot_cells = get_robot_cells(self.center)
+        sensors = self.sensors[:]
+        sensor_index = sensors.index
+        updated_cells = {}
+
+        for sensor in sensors:
+            true_facing = (sensor["facing"] + self.facing) % 4
+
+            if sensor["mount_loc"] != CS:
+                offset = self.facing * 2
+                true_mounting = (sensor["mount_loc"] + offset) % 8
+            else:
+                true_mounting = CS
+
+            if true_mounting == NWS:
+                origin = robot_cells[0]
+            elif true_mounting == NS:
+                origin = robot_cells[1]
+            elif true_mounting == NES:
+                origin = robot_cells[2]
+            elif true_mounting == WS:
+                origin = robot_cells[3]
+            elif true_mounting == ES:
+                origin = robot_cells[5]
+            elif true_mounting == SWS:
+                origin = robot_cells[6]
+            elif true_mounting == SS:
+                origin = robot_cells[7]
+            elif true_mounting == SES:
+                origin = robot_cells[8]
+            elif true_mounting == CS:
+                origin = robot_cells[4]
+
+            y, x = get_matrix_coords(origin)
+            cover_range = list(range(1, sensor["range"] + 1))
+            read_range = list(range(sensor["blind_spot"] + 1, sensor["range"] + 1))
+            blind_range = list(range(1, sensor["blind_spot"] + 1))
+
+            reading = readings[sensor_index(sensor)]
+            print('Sensor', sensor_index(sensor))
+
+            weight = 4
+
+            # If reading is 0, means no obstacle in the covered range
+            if reading == 0:
+                print('No Obstacle in Covered Range')
+                for cell in cover_range:
+                    try:
+                        if true_facing == NORTH:
+                            to_explore = (y + cell, x)
+                        elif true_facing == EAST:
+                            to_explore = (y, x + cell)
+                        elif true_facing == SOUTH:
+                            to_explore = (y - cell, x)
+                        elif true_facing == WEST:
+                            to_explore = (y, x - cell)
+
+                        if to_explore[0] < 0 or to_explore[0] > 19 or to_explore[1] < 0 or to_explore[1] > 14:
+                            print('ie')
+                            raise IndexError
+
+                        cell_index = get_grid_index(to_explore[0], to_explore[1])
+
+                        updated_cell, value = self._mark_probability(cell_index, 0 * weight, 1 * weight)
+                        if updated_cell is not None:
+                            updated_cells[updated_cell] = value
+
+                        weight = max(weight/2, 1)
+
+                    except IndexError:
+                        break
+                print('br')
+
+            # if reading in the read range, mark cells as 0 until the obstacle cell
+            elif reading in read_range:
+                print('Has Obstacle in Covered Range')
+
+                # If the robot is able to observe onstacle in covered range, there is no obstacle in the blind spot.
+                for cell in blind_range:
+                    try:
+                        if true_facing == NORTH:
+                            to_explore = (y + cell, x)
+                        elif true_facing == EAST:
+                            to_explore = (y, x + cell)
+                        elif true_facing == SOUTH:
+                            to_explore = (y - cell, x)
+                        elif true_facing == WEST:
+                            to_explore = (y, x - cell)
+
+                        if to_explore[0] < 0 or to_explore[0] > 19 or to_explore[1] < 0 or to_explore[1] > 14:
+                            print('ie')
+                            raise IndexError
+
+                        cell_index = get_grid_index(to_explore[0], to_explore[1])
+                        updated_cell, value = self._mark_probability(cell_index, 0, 1 * weight)
+                        if updated_cell is not None:
+                            updated_cells[updated_cell] = value
+                    except IndexError:
+                        break
+
+                # Check for cells in read range
+                for cell in read_range:
+                    try:
+                        if true_facing == NORTH:
+                            to_explore = (y + cell, x)
+                        elif true_facing == EAST:
+                            to_explore = (y, x + cell)
+                        elif true_facing == SOUTH:
+                            to_explore = (y - cell, x)
+                        elif true_facing == WEST:
+                            to_explore = (y, x - cell)
+
+                        if to_explore[0] < 0 or to_explore[0] > 19 or to_explore[1] < 0 or to_explore[1] > 14:
+                            print('ie')
+                            raise IndexError
+
+                        cell_index = get_grid_index(to_explore[0], to_explore[1])
+
+                        updated_cell, value = self._mark_probability(cell_index, int(reading == cell) * weight, 1 * weight)
+                        if updated_cell is not None:
+                            updated_cells[updated_cell] = value
+
+                        # If the current cell is the one with obstacle, break the loop
+                        if self.discovered_map[to_explore[0]][to_explore[1]] == 1:
+                            raise IndexError
+
+                        weight /= 2
+
+                    except IndexError:
+                        break
+                print('br')
+
+            else:
+                print('Unacceptable Reading')
         return updated_cells
 
     def get_explore_string(self):

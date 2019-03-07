@@ -3,7 +3,7 @@
 IS_DEBUG_MODE = True # enable console printout at the cost of a slower run
 IS_ARROW_SCAN = True # scan for arrows during exploration
 IS_SIMULATE_MODE = False # Whether or not the current instance is going to be for a simulated or real run.
-NUM_SENSOR_READINGS = 1
+IS_SLEEP = False
 
 # Sockets
 # WIFI_HOST = '192.168.15.15'

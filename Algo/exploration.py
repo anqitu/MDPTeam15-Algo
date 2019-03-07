@@ -44,7 +44,6 @@ class Exploration:
         while True:
             try:
                 while not is_back_at_start:
-
                     updated_cells = self._robot.get_sensor_readings()
                     yield updated_cells
 
@@ -70,6 +69,7 @@ class Exploration:
 
                                 is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
                                 yield is_complete
+
                                 if is_complete:
                                     raise ExploreComplete
 
@@ -80,20 +80,17 @@ class Exploration:
                                     break
                                 updated_cells = self._robot.get_sensor_readings()
                                 yield updated_cells
+
                                 self._robot.turn_robot(BACKWARD)
                                 yield BACKWARD, TURN, {}
 
-                            # Start (Add by Anqi)
                             else:
                                 self._robot.turn_robot(RIGHT)
                                 yield RIGHT, TURN, {}
-                            # End (Add by Anqi)
 
                         else:
                             self._robot.turn_robot(RIGHT)
                             yield RIGHT, TURN, {}
-
-                    # print('self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)')
 
                     is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
                     yield is_complete
@@ -105,6 +102,9 @@ class Exploration:
                         is_back_at_start = True
 
                     yield is_back_at_start
+
+                if self._robot.get_completion_percentage() >= 97.5:
+                    return True
 
                 while True:
                     try:
@@ -250,7 +250,6 @@ class Exploration:
                         else:
                             self._robot.turn_robot(sender, RIGHT)
                             yield RIGHT, TURN, {}
-
 
                     is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
                     yield is_complete
