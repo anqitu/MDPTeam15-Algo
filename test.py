@@ -1,3 +1,4 @@
+from Utils.utils import *
 FORWARD = 0                                             # Move forward 1 square
 LEFT = -1                                               # Turn left and move forward 1 square
 RIGHT = 1                                               # Turn right and move forward 1 square
@@ -23,22 +24,4 @@ def get_arduino_cmd(direction):
     if direction == RIGHT:
         return ARDUINO_TURN_RIGHT
 
-
-fastest_path = [2, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 1, -1, 0, 0, 1, 0, 0, 0]
-moves = []
-for move in fastest_path:
-    if move != FORWARD:
-        moves.append(get_arduino_cmd(move))
-        moves.append(get_arduino_cmd(FORWARD))
-    else:
-        if len(moves) == 0 :
-            moves.append(get_arduino_cmd(FORWARD))
-        else:
-            moves[-1] = moves[-1] + get_arduino_cmd(FORWARD)
-
-move_str = ''
-for move in fastest_path:
-    if move != FORWARD:
-        move_str += get_arduino_cmd(move)
-    move_str += get_arduino_cmd(FORWARD)
-moves = [move_str]
+move_strs = get_fastest_path_move_strs([1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 1, -1, 0, 0, 1, 0, 0, 0])

@@ -62,31 +62,34 @@ class Exploration:
                         if in_efficiency_limit:
                             print('Robot in efficiency limit.... ')
 
-                            if self._robot.check_free(LEFT):
+                            self._robot.turn_robot(RIGHT)
+                            yield RIGHT, TURN, {}
 
-                                updated_cells = self._robot.move_robot(LEFT)
-                                yield LEFT, MOVE, updated_cells
-
-                                is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
-                                yield is_complete
-
-                                if is_complete:
-                                    raise ExploreComplete
-
-                                if self._robot.center == START:
-                                    is_back_at_start = True
-                                yield is_back_at_start
-                                if is_back_at_start:
-                                    break
-                                updated_cells = self._robot.get_sensor_readings()
-                                yield updated_cells
-
-                                self._robot.turn_robot(BACKWARD)
-                                yield BACKWARD, TURN, {}
-
-                            else:
-                                self._robot.turn_robot(RIGHT)
-                                yield RIGHT, TURN, {}
+                            # if self._robot.check_free(LEFT):
+                            #
+                            #     updated_cells = self._robot.move_robot(LEFT)
+                            #     yield LEFT, MOVE, updated_cells
+                            #
+                            #     is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
+                            #     yield is_complete
+                            #
+                            #     if is_complete:
+                            #         raise ExploreComplete
+                            #
+                            #     if self._robot.center == START:
+                            #         is_back_at_start = True
+                            #     yield is_back_at_start
+                            #     if is_back_at_start:
+                            #         break
+                            #     updated_cells = self._robot.get_sensor_readings()
+                            #     yield updated_cells
+                            #
+                            #     self._robot.turn_robot(BACKWARD)
+                            #     yield BACKWARD, TURN, {}
+                            #
+                            # else:
+                            #     self._robot.turn_robot(RIGHT)
+                            #     yield RIGHT, TURN, {}
 
                         else:
                             self._robot.turn_robot(RIGHT)
@@ -103,7 +106,7 @@ class Exploration:
 
                     yield is_back_at_start
 
-                if self._robot.get_completion_percentage() >= 97.5:
+                if self._robot.get_completion_percentage() >= COMPLETION_THRESHOLD:
                     return True
 
                 while True:
@@ -221,31 +224,33 @@ class Exploration:
                     else:
                         if in_efficiency_limit:
                             print('Robot in efficiency limit.... ')
+                            self._robot.turn_robot(sender, RIGHT)
+                            yield RIGHT, TURN, {}
 
-                            if self._robot.check_free(LEFT):
-                                updated_cells = self._robot.move_robot(sender, LEFT)
-                                yield LEFT, MOVE, updated_cells
-
-                                is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
-                                yield is_complete
-
-                                if is_complete:
-                                    raise ExploreComplete
-
-                                if self._robot.center == START:
-                                    is_back_at_start = True
-                                yield is_back_at_start
-                                if is_back_at_start:
-                                    break
-                                updated_cells = self._robot.get_sensor_readings(sender)
-                                yield updated_cells
-
-                                self._robot.turn_robot(sender, BACKWARD)
-                                yield BACKWARD, TURN, {}
-
-                            else:
-                                self._robot.turn_robot(sender, RIGHT)
-                                yield RIGHT, TURN, {}
+                            # if self._robot.check_free(LEFT):
+                            #     updated_cells = self._robot.move_robot(sender, LEFT)
+                            #     yield LEFT, MOVE, updated_cells
+                            #
+                            #     is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
+                            #     yield is_complete
+                            #
+                            #     if is_complete:
+                            #         raise ExploreComplete
+                            #
+                            #     if self._robot.center == START:
+                            #         is_back_at_start = True
+                            #     yield is_back_at_start
+                            #     if is_back_at_start:
+                            #         break
+                            #     updated_cells = self._robot.get_sensor_readings(sender)
+                            #     yield updated_cells
+                            #
+                            #     self._robot.turn_robot(sender, BACKWARD)
+                            #     yield BACKWARD, TURN, {}
+                            #
+                            # else:
+                            #     self._robot.turn_robot(sender, RIGHT)
+                            #     yield RIGHT, TURN, {}
 
                         else:
                             self._robot.turn_robot(sender, RIGHT)
@@ -262,7 +267,7 @@ class Exploration:
 
                     yield is_back_at_start
 
-                if self._robot.get_completion_percentage() >= 97.5:
+                if self._robot.get_completion_percentage() >= COMPLETION_THRESHOLD:
                     return True
 
                 # Finding shortest path to nearest unexplored square

@@ -95,7 +95,7 @@ class Window(Frame):
         self._sender.send_rpi("Hello from PC to RPi")
         # for i in range(100):
         #     self._sender.send_rpi("I")
-        #     sleep(4)
+        #     sleep(SLEEP_SEC)
         self._sender.send_arduino("Hello from PC to Arduino")
         self._sender.send_android("Hello from PC to Android")
 
@@ -113,8 +113,19 @@ class Window(Frame):
 
         # # For debug: Fast Path without Android
         # sleep(5)
-        # moves = [0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 1, -1, 0, 0, 1, 0, 0, 0]
-
+        # move_strs = get_fastest_path_move_strs([1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 1, -1, 0, 0, 1, 0, 0, 0])
+        # print(move_strs)
+        # for move_str in move_strs:
+        #     self._sender.send_arduino(move_str)
+        #
+        #     for cmd in move_str:
+        #         self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
+        #         if convert_arduino_cmd_to_direction(cmd) == FORWARD:
+        #             self._move_robot(convert_arduino_cmd_to_direction(cmd))
+        #         else:
+        #             self._turn_head(self._facing, convert_arduino_cmd_to_direction(cmd))
+        #         self._sender.wait_arduino(ARDUIMO_MOVED)
+        #         self._update_android()
 
         disable_print()
 
@@ -296,7 +307,7 @@ class Window(Frame):
                         sleep(self._timestep)
 
                     if IS_SLEEP:
-                        sleep(4)
+                        sleep(SLEEP_SEC)
 
                     self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
                     self._update_cells(updated_cells)
@@ -331,7 +342,7 @@ class Window(Frame):
                             if self._is_sim:
                                 sleep(self._timestep)
                             if IS_SLEEP:
-                                sleep(4)
+                                sleep(SLEEP_SEC)
 
                             self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
                             print_map_info(self._robot)
@@ -364,7 +375,7 @@ class Window(Frame):
                     if self._is_sim:
                         sleep(self._timestep)
                     if IS_SLEEP:
-                        sleep(4)
+                        sleep(SLEEP_SEC)
 
                     self._move_robot(direction)
                     self._update_android()
@@ -397,26 +408,26 @@ class Window(Frame):
         :return: N/A
         """
         enable_print()
-        # print('Calibrating...')
+        print('Calibrating...')
         disable_print()
         self._fastest_path = self._find_fastest_path()
 
-        # if self._is_sim:
-        #     sleep(self._timestep)
-        #     self._robot.turn_robot(self._fastest_path[0])
-        #     self._turn_head(self._facing, self._fastest_path[0])
-        # else:
-        #     print('Turning Robot')
-        #     self._robot.turn_robot(self._sender, self._fastest_path[0])
-        #     print('Robot Turned')
-        #     self._turn_head(self._facing, self._fastest_path[0])
-        #
-        # self._fastest_path[0] = FORWARD
-        # self._update_android()
-        #
-        # enable_print()
-        # print('Calibrating Done!')
-        # disable_print()
+        if self._is_sim:
+            sleep(self._timestep)
+            self._robot.turn_robot(self._fastest_path[0])
+            self._turn_head(self._facing, self._fastest_path[0])
+        else:
+            print('Turning Robot')
+            self._robot.turn_robot(self._sender, self._fastest_path[0])
+            print('Robot Turned')
+            self._turn_head(self._facing, self._fastest_path[0])
+
+        self._fastest_path[0] = FORWARD
+        self._update_android()
+
+        enable_print()
+        print('Calibrating Done!')
+        disable_print()
 
     def _find_fastest_path(self):
         """Calculate and return the set of moves required for the fastest path."""

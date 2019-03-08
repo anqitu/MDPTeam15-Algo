@@ -4,10 +4,12 @@ IS_DEBUG_MODE = True # enable console printout at the cost of a slower run
 IS_ARROW_SCAN = True # scan for arrows during exploration
 IS_SIMULATE_MODE = False # Whether or not the current instance is going to be for a simulated or real run.
 IS_SLEEP = False
+SLEEP_SEC = 2
+COMPLETION_THRESHOLD = 0.98
 
 # Sockets
-# WIFI_HOST = '192.168.15.15'
-WIFI_HOST = '127.0.0.1'
+WIFI_HOST = '192.168.15.15'
+# WIFI_HOST = '127.0.0.1'
 RPI_PORT = 6688
 
 # Directions
@@ -58,6 +60,7 @@ MOVEMENTS = {
 # 0   [1,   2,   3,   4,   5,   6,   7,   8,   9,   10,  11,  12,  13,  14,  15]
 # y
 #   x  0    1    2    3    4    5    6    7    8    9    10   11   12   13   14
+
 NUM_ROWS = COL_LENGTH = 20                              # Number of rows in the grid; length of one col
 NUM_COLS = ROW_LENGTH = 15                              # Number of cols in the grid; length of one row
 START = 1 + ROW_LENGTH + 1                              # Center of Start area --> 17

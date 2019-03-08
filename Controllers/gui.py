@@ -61,7 +61,7 @@ class Window(Frame):
         self._explore_label.grid(row=1, column=0)
 
         self._explore_entry = Entry(bg_frame, width=5, justify='center')
-        self._explore_entry.insert(END, "100")
+        self._explore_entry.insert(END, str(int(COMPLETION_THRESHOLD * 300)))
         self._explore_entry.grid(row=1, column=1)
 
         self._percentage_completion_label = Label(bg_frame, text="0.0%")
@@ -71,7 +71,7 @@ class Window(Frame):
         self._time_limit_label.grid(row=2, column=0)
 
         self._time_limit_entry = Entry(bg_frame, width=5, justify='center')
-        self._time_limit_entry.insert(END, "30")
+        self._time_limit_entry.insert(END, "60")
         self._time_limit_entry.grid(row=2, column=1)
 
         self._time_spent_label = Label(bg_frame, text="0.0s")

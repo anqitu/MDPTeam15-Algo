@@ -38,7 +38,7 @@ class Robot:
             {"mount_loc": NWS, "facing": NORTH, "range": 3, "blind_spot": 0},
             {"mount_loc": NS, "facing": NORTH, "range": 3, "blind_spot": 0},
             {"mount_loc": NES, "facing": NORTH, "range": 3, "blind_spot": 0},
-            {"mount_loc": NES, "facing": EAST, "range": 6, "blind_spot": 3}
+            {"mount_loc": NES, "facing": EAST, "range": 5, "blind_spot": 3}
         ]
 
         regex_str = '^(\d*,){%s}$' % (len(self.sensors) * 1)
@@ -284,6 +284,8 @@ class Robot:
 
         sender.wait_arduino(ARDUIMO_MOVED)
 
+        self.calibrate(sender)
+
         if IS_ARROW_SCAN and not self.is_fast_path:
             self.check_arrow(sender)
 
@@ -297,13 +299,10 @@ class Robot:
         :param direction: The direction to move (FORWARD, LEFT, RIGHT, BACKWARD)
         :return: Any cells that the robot has stepped on that it had not yet before.
         """
-        command = ''
-        if direction!= FORWARD:
-            command += get_arduino_cmd(direction)
-        command += get_arduino_cmd(FORWARD)
-        sender.send_arduino(command)
+        self.turn_robot(sender, direction)
 
-        self.facing = (self.facing + direction) % 4
+        sender.send_arduino(get_arduino_cmd(FORWARD))
+
         if self.facing == NORTH:
             self.center += ROW_LENGTH
         elif self.facing == EAST:
@@ -313,16 +312,22 @@ class Robot:
         elif self.facing == WEST:
             self.center -= 1
 
-        updated_cells = self.mark_robot_standing()
-
         sender.wait_arduino(ARDUIMO_MOVED)
-        if direction!= FORWARD:
-            sender.wait_arduino(ARDUIMO_MOVED)
+
+        self.calibrate(sender)
 
         if IS_ARROW_SCAN and not self.is_fast_path:
             self.check_arrow(sender)
 
+        updated_cells = self.mark_robot_standing()
+
         return updated_cells
+
+    def calibrate(self, sender):
+        print('Calibrating')
+        # sender.send_arduino('C')
+        # sender.wait_arduino('C')
+
 
     def move_robot_algo(self, direction):
         """
@@ -400,6 +405,64 @@ class Robot:
                 return is_free
         except IndexError:
             return False
+
+    # def is_calibrate_possible(self):
+    #     print('Checking Whether Calibration Possible...')
+    #
+    #     y, x = get_matrix_coords(self.center)
+    #     discovered_map = self.discovered_map
+    #     arrow_taken_status = self.arrow_taken_status
+    #     facing = self.facing
+    #     sensor_facing = (facing + WEST) % 4
+    #
+    #     print('Robot Position@ {}'.format((x, y, facing)))
+    #
+    #     try:
+    #         if sensor_facing == WEST:
+    #             cells_middle = []
+    #             cells_right = []
+    #             for distance in range(2, 5):
+    #                 new_x = x - distance
+    #                 if new_x < 0:
+    #                     cells_middle.append(1)
+    #                     cells_right.append(1)
+    #                 else:
+    #                     cells_middle.append(discovered_map[y][new_x])
+    #                     cells_right.append(discovered_map[y + 1][new_x])
+    #             print('cells_middle: {}'.format(cells_middle))
+    #             print('cells_right: {}'.format(cells_right))
+    #
+    #             if 1 in cells_middle and 1 in cells_right:
+    #                 if cells_middle.index(1) == cells_right.index(1):
+    #                     return True
+    #         # elif sensor_facing == NORTH:
+    #         #     new_y = y + distance
+    #         #     if new_y > 19:
+    #         #         raise IndexError
+    #         #     for i, j in [(x - 1, new_y), (x, new_y)]:
+    #         #         print('Checking %s,%s' % (i, j))
+    #         #         if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
+    #         #             return True
+    #         # elif sensor_facing == EAST:
+    #         #     new_x = x + distance
+    #         #     if new_x > 14:
+    #         #         raise IndexError
+    #         #     for i, j in [(new_x, y + 1), (new_x, y)]:
+    #         #         print('Checking %s,%s' % (i, j))
+    #         #         if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
+    #         #             return True
+    #         # elif sensor_facing == SOUTH:
+    #         #     new_y = y - distance
+    #         #     if new_y < 0:
+    #         #         raise IndexError
+    #         #     for i, j in [(x + 1, new_y), (x, new_y)]:
+    #         #         print('Checking %s,%s' % (i, j))
+    #         #         if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
+    #         #             return True
+    #
+    #     except IndexError:
+    #         print('ie')
+    #         return True
 
     def is_arrow_possible(self):
         """

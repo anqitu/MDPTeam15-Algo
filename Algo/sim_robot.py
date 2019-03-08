@@ -30,7 +30,7 @@ class Robot:
             {"mount_loc": NWS, "facing": NORTH, "range": 3, "blind_spot": 0},
             {"mount_loc": NS, "facing": NORTH, "range": 3, "blind_spot": 0},
             {"mount_loc": NES, "facing": NORTH, "range": 3, "blind_spot": 0},
-            {"mount_loc": NES, "facing": EAST, "range": 6, "blind_spot": 0}
+            {"mount_loc": NES, "facing": EAST, "range": 5, "blind_spot": 3}
         ]
         self.real_map = real_map
 
@@ -253,6 +253,8 @@ class Robot:
 
         self.facing = (self.facing + direction) % 4
 
+        self.calibrate()
+
         if IS_ARROW_SCAN and not self.is_fast_path:
             self.check_arrow()
 
@@ -274,12 +276,17 @@ class Robot:
         elif self.facing == WEST:
             self.center -= 1
 
-        updated_cells = self.mark_robot_standing()
+        self.calibrate()
 
         if IS_ARROW_SCAN and not self.is_fast_path:
             self.check_arrow()
 
+        updated_cells = self.mark_robot_standing()
+
         return updated_cells
+
+    def calibrate(self, sender):
+        print('Calibrating')
 
     def move_robot_algo(self, direction):
         """
