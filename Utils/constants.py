@@ -5,7 +5,7 @@ IS_ARROW_SCAN = False # scan for arrows during exploration
 IS_SIMULATE_MODE = False # Whether or not the current instance is going to be for a simulated or real run.
 IS_SLEEP = False
 SLEEP_SEC = 2
-CALIBRATION_STEPS = 1
+CALIBRATION_STEPS = 2
 COMPLETION_THRESHOLD = 300
 
 # Sockets

@@ -116,6 +116,25 @@ class Controller:
         elif msg == ANDROID_TURN_TO_BACKWARD:
             self._sender.send_arduino(ARDUINO_TURN_TO_BACKWARD)
 
+    def _load_explore_map(self):
+        if self._is_sim:
+            from Algo.sim_robot import Robot
+            self._robot = Robot(exploration_status=EXPLORE_STATUS_MAP,
+                                facing=NORTH,
+                                discovered_map=EXPLORATION_OBSTACLE_MAP,
+                                real_map=[[]])
+        else:
+            from Algo.real_robot import Robot
+            self._robot = Robot(exploration_status=EXPLORE_STATUS_MAP,
+                                facing=NORTH,
+                                discovered_map=EXPLORATION_OBSTACLE_MAP)
+
+        cells = [item for sublist in EXPLORATION_OBSTACLE_MAP for item in sublist]
+        updated_cells = {i+1: cells[i] for i in range(len(cells))}
+        self._update_android()
+
+        self._calibrate_after_exploration()
+
 
     def _set_way_point(self, coordinate):
         """
@@ -136,10 +155,12 @@ class Controller:
 
         :return: N/A
         """
-        if self._is_sim:
-            self._robot.calibrate()
-        else:
-            self._robot.calibrate(self._sender)
+        self._robot.calibrate(self._sender)
+
+        # if self._is_sim:
+        #     self._robot.calibrate()
+        # else:
+        #     self._robot.calibrate(self._sender)
 
     def _update_android(self):
         """
@@ -162,8 +183,8 @@ class Controller:
         """Start the exploration."""
 
         start_time = time()
-        if self._is_sim:
-            self._robot.real_map = self._grid_map
+        # if self._is_sim:
+        #     self._robot.real_map = self._grid_map
         exploration = Exploration(self._robot, start_time, self._explore_limit, self._time_limit)
 
         if self._is_sim:
@@ -190,11 +211,10 @@ class Controller:
                     direction, move_or_turn, updated_cells = run.send(0)
                     print('direction, move_or_turn, updated_cells (robot standing): {}'.format((MOVEMENTS[direction], MOVE_TURN[move_or_turn], updated_cells)))
 
-                    if self._is_sim:
-                        sleep(self._timestep)
-
-                    if IS_SLEEP:
-                        sleep(SLEEP_SEC)
+                    # if self._is_sim:
+                    #     sleep(self._timestep)
+                    # if IS_SLEEP:
+                    #     sleep(SLEEP_SEC)
 
                     self._update_android()
                     print_map_info(self._robot)
@@ -220,10 +240,10 @@ class Controller:
                         while True:
                             print('=' * 100)
                             updated_or_moved_or_turned, value, is_complete = run.send(0)
-                            if self._is_sim:
-                                sleep(self._timestep)
-                            if IS_SLEEP:
-                                sleep(SLEEP_SEC)
+                            # if self._is_sim:
+                            #     sleep(self._timestep)
+                            # if IS_SLEEP:
+                            #     sleep(SLEEP_SEC)
 
                             print('-' * 50)
                             if updated_or_moved_or_turned == "updated":
@@ -256,10 +276,10 @@ class Controller:
                 disable_print()
                 while True:
                     direction = run.send(0)
-                    if self._is_sim:
-                        sleep(self._timestep)
-                    if IS_SLEEP:
-                        sleep(SLEEP_SEC)
+                    # if self._is_sim:
+                    #     sleep(self._timestep)
+                    # if IS_SLEEP:
+                    #     sleep(SLEEP_SEC)
 
                     self._update_android()
 
@@ -396,7 +416,7 @@ class Controller:
         file = open(filename, mode="r")
         map_str = file.read()
 
-        match = re.fullmatch("[01\n]*", map_str)
+        match = re.fullmatch("[012345\n]*", map_str)
         if match:
             self._grid_map = []
             row_strings = map_str.split("\n")

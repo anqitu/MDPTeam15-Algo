@@ -89,39 +89,11 @@ class Window(Frame):
 
         print('Init complete!')
         self._sender.send_rpi("Hello from PC to RPi\n")
-        # for i in range(100):
-        #     self._sender.send_rpi("I")
-        #     sleep(SLEEP_SEC)
         self._sender.send_arduino("Hello from PC to Arduino\n")
         self._sender.send_android("Hello from PC to Android\n")
 
         self._facing = self._robot.facing
         self._draw_robot(START, self._facing)
-
-        # # For debug: Exploration without Android
-        # self._load_explore_map()
-        # thread = threading.Thread(target=self._explore)
-        # thread.daemon = True
-        # thread.start()
-        # enable_print()
-        # print('Start EXPLORATION')
-        # disable_print()
-
-        # # For debug: Fast Path without Android
-        # sleep(5)
-        # move_strs = get_fastest_path_move_strs([1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 1, -1, 0, 0, 1, 0, 0, 0])
-        # print(move_strs)
-        # for move_str in move_strs:
-        #     self._sender.send_arduino(move_str)
-        #
-        #     for cmd in move_str:
-        #         self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
-        #         if convert_arduino_cmd_to_direction(cmd) == FORWARD:
-        #             self._move_robot(convert_arduino_cmd_to_direction(cmd))
-        #         else:
-        #             self._turn_head(self._facing, convert_arduino_cmd_to_direction(cmd))
-        #         self._sender.wait_arduino(ARDUIMO_MOVED)
-        #         self._update_android()
 
         disable_print()
 
@@ -241,10 +213,12 @@ class Window(Frame):
 
         :return: N/A
         """
-        if self._is_sim:
-            self._robot.calibrate()
-        else:
-            self._robot.calibrate(self._sender)
+        self._robot.calibrate(self._sender)
+
+        # if self._is_sim:
+        #     self._robot.calibrate()
+        # else:
+        #     self._robot.calibrate(self._sender)
 
     def _update_android(self):
         """
@@ -266,8 +240,8 @@ class Window(Frame):
         """Start the exploration."""
 
         start_time = time()
-        if self._is_sim:
-            self._robot.real_map = self._grid_map
+        # if self._is_sim:
+        #     self._robot.real_map = self._grid_map
         exploration = Exploration(self._robot, start_time, self._explore_limit, self._time_limit)
 
         if self._is_sim:
@@ -296,11 +270,11 @@ class Window(Frame):
                     direction, move_or_turn, updated_cells = run.send(0)
                     print('direction, move_or_turn, updated_cells (robot standing): {}'.format((MOVEMENTS[direction], MOVE_TURN[move_or_turn], updated_cells)))
 
-                    if self._is_sim:
-                        sleep(self._timestep)
+                    # if self._is_sim:
+                    #     sleep(self._timestep)
 
-                    if IS_SLEEP:
-                        sleep(SLEEP_SEC)
+                    # if IS_SLEEP:
+                    #     sleep(SLEEP_SEC)
 
                     self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
                     self._update_cells(updated_cells)
@@ -334,10 +308,10 @@ class Window(Frame):
                         while True:
                             print('=' * 100)
                             updated_or_moved_or_turned, value, is_complete = run.send(0)
-                            if self._is_sim:
-                                sleep(self._timestep)
-                            if IS_SLEEP:
-                                sleep(SLEEP_SEC)
+                            # if self._is_sim:
+                            #     sleep(self._timestep)
+                            # if IS_SLEEP:
+                            #     sleep(SLEEP_SEC)
 
                             self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
 
@@ -375,10 +349,10 @@ class Window(Frame):
                 disable_print()
                 while True:
                     direction = run.send(0)
-                    if self._is_sim:
-                        sleep(self._timestep)
-                    if IS_SLEEP:
-                        sleep(SLEEP_SEC)
+                    # if self._is_sim:
+                    #     sleep(self._timestep)
+                    # if IS_SLEEP:
+                    #     sleep(SLEEP_SEC)
 
                     self._move_robot(direction)
                     self._update_android()
