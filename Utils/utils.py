@@ -76,24 +76,14 @@ def convert_arduino_cmd_to_direction(cmd):
 
 def get_fastest_path_move_strs(fastest_path):
     """ Calculate and return the list of moves the robot has to make given a path. """
-    # fastest_path = [1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 1, -1, 0, 0, 1, 0, 0, 0]
-    moves = []
+
+    move_str = ''
     for move in fastest_path:
         if move != FORWARD:
-            moves.append(get_arduino_cmd(move))
-            moves.append(get_arduino_cmd(FORWARD))
-        else:
-            if len(moves) == 0 :
-                moves.append(get_arduino_cmd(FORWARD))
-            else:
-                moves[-1] = moves[-1] + get_arduino_cmd(FORWARD)
-
-    # move_str = ''
-    # for move in fastest_path:
-    #     if move != FORWARD:
-    #         move_str += get_arduino_cmd(move)
-    #     move_str += get_arduino_cmd(FORWARD)
-    # moves = [move_str]
+            move_str += get_arduino_cmd(move)
+        move_str += get_arduino_cmd(FORWARD)
+    # moves = [i for i in move_str]
+    moves = [move_str[i:i+FAST_PATH_STEP] for i in range(0, len(move_str), FAST_PATH_STEP)]
 
     return moves
 

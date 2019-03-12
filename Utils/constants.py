@@ -5,8 +5,10 @@ IS_ARROW_SCAN = False # scan for arrows during exploration
 IS_SIMULATE_MODE = False # Whether or not the current instance is going to be for a simulated or real run.
 IS_SLEEP = False
 SLEEP_SEC = 2
-CALIBRATION_STEPS = 2
+CALIBRATION_STEPS = 1
 COMPLETION_THRESHOLD = 300
+FAST_PATH_STEP = 2
+FAST_PATH_SLEEP_SEC = 0.1
 
 # Sockets
 WIFI_HOST = '192.168.15.15'

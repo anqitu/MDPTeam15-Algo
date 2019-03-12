@@ -469,6 +469,7 @@ class Window(Frame):
                             self._turn_head(self._facing, convert_arduino_cmd_to_direction(cmd))
 
                         self._update_android()
+                    sleep(FAST_PATH_SLEEP_SEC)
 
             enable_print()
             print('Reached GOAL!')
