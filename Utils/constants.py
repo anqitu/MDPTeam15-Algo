@@ -1,14 +1,17 @@
 """ This module defines all the constants that are used throughout the program. """
 
-IS_DEBUG_MODE = True # enable console printout at the cost of a slower run
-IS_ARROW_SCAN = False # scan for arrows during exploration
+""" Constants to play with (Start)"""
+IS_DEBUG_MODE = True # Whether enable console printout at the cost of a slower run
+IS_ARROW_SCAN = False # Whether scan for arrows during exploration
+CALIBRATION_STEPS = 1 # Number of steps per calibration
+COMPLETION_THRESHOLD = 300 # Target threshold
+FAST_PATH_STEP = 2 # Number of straight moves to send per time
+FAST_PATH_SLEEP_SEC = 0.2 # Duration of delay per instruction during fast path
+""" Constants to play with (End)"""
+
 IS_SIMULATE_MODE = False # Whether or not the current instance is going to be for a simulated or real run.
 IS_SLEEP = False
 SLEEP_SEC = 2
-CALIBRATION_STEPS = 1
-COMPLETION_THRESHOLD = 300
-FAST_PATH_STEP = 2
-FAST_PATH_SLEEP_SEC = 0.2
 
 # Sockets
 WIFI_HOST = '192.168.15.15'
