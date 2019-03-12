@@ -435,13 +435,9 @@ class Window(Frame):
         """Move the robot along the fastest path."""
         if self._fastest_path:
             self._robot.is_fast_path = True
-            move_strs = get_fastest_path_move_strs(self._fastest_path)
-            enable_print()
-            print('Move String: {}'.format(move_strs))
-            disable_print()
 
             if self._is_sim:
-                move_strs = get_fastest_path_move_strs(self._fastest_path)
+                move_strs = get_fastest_path_moves(self._fastest_path)
                 for move_str in move_strs:
                     self._sender.send_arduino(move_str)
 
@@ -455,7 +451,7 @@ class Window(Frame):
                         self._update_android()
 
             else:
-                move_strs = get_fastest_path_move_strs(self._fastest_path)
+                move_strs = get_fastest_path_moves(self._fastest_path)
                 for move_str in move_strs:
                     sleep(FAST_PATH_SLEEP_SEC)
                     self._sender.send_arduino(move_str)

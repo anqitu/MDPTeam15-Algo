@@ -74,18 +74,30 @@ def convert_arduino_cmd_to_direction(cmd):
     if cmd == ARDUINO_TURN_RIGHT:
         return RIGHT
 
-def get_fastest_path_move_strs(fastest_path):
+def get_fastest_path_moves(fastest_path):
     """ Calculate and return the list of moves the robot has to make given a path. """
 
-    move_str = ''
+    # fastest_path = [0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 1, -1, 0, 0, 1, 0, 0, 0]
+    moves = []
     for move in fastest_path:
         if move != FORWARD:
-            move_str += get_arduino_cmd(move)
-        move_str += get_arduino_cmd(FORWARD)
-    # moves = [i for i in move_str]
-    moves = [move_str[i:i+FAST_PATH_STEP] for i in range(0, len(move_str), FAST_PATH_STEP)]
+            moves.append(get_arduino_cmd(move))
+            moves.append(get_arduino_cmd(FORWARD))
+        else:
+            if len(moves) == 0 :
+                moves.append(get_arduino_cmd(FORWARD))
+            else:
+                moves[-1] = moves[-1] + get_arduino_cmd(FORWARD)
 
-    return moves
+    print('Original Commands: {}'.format(moves))
+
+    moves_arduino = []
+    for move in moves:
+        moves_arduino = moves_arduino + [move[i:i+FAST_PATH_STEP] for i in range(0, len(move), FAST_PATH_STEP)]
+
+    print('Arduino Commands: {}'.format(moves_arduino))
+
+    return moves_arduino
 
 
 def disable_print():

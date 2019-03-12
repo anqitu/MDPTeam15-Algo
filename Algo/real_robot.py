@@ -747,8 +747,8 @@ class Robot:
             self.calibrate(sender)
             self.is_calibration_time = False
 
-        # if IS_ARROW_SCAN and not self.is_fast_path:
-        #     self.check_arrow()
+        if IS_ARROW_SCAN and not self.is_fast_path:
+            self.check_arrow()
 
         return updated_cells, is_blind_range_undetected_obstacle
 
