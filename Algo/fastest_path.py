@@ -105,7 +105,7 @@ def get_shortest_path_moves(robot, start, goal, before_start_point=None, is_give
         limited_map = robot.discovered_map
 
     if limited_map[start[0]][start[1]]:
-        return False
+        return []
 
     cells = find_fastest_path(graph=limited_map, start_point=start, goal_point=goal,
                               before_start_point=before_start_point)
@@ -125,7 +125,7 @@ def get_shortest_path_moves(robot, start, goal, before_start_point=None, is_give
     potential_center = start
 
     if not cells:
-        return False
+        return []
 
     for cell in cells:
 

@@ -38,6 +38,8 @@ class Window(Frame):
         Frame.__init__(self, master)
 
         self._master = master
+        self._filename = ''
+
         print("Init window starting")
         self._init_window()
         print("Init window completed")
@@ -62,14 +64,8 @@ class Window(Frame):
                         break
                     elif ans.lower() == 'n':
                         exit()
-            # self._timestep = 0.1
-            self._timestep = float(input("Timestep: ").strip())
-            self._explore_limit = 100
-            # self._explore_limit = float(input("Coverage Limit: ").strip())
-            # self._time_limit = float(input("Time Limit: ").strip())
-            self._time_limit = 100
-            # self._time_limit = 100
 
+            self._timestep = float(input("Timestep: ").strip())
             from Algo.sim_robot import Robot
             self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
                                 facing=NORTH,
@@ -77,9 +73,6 @@ class Window(Frame):
                                 real_map=[[]])
         else:
             print('Real run')
-
-            self._explore_limit = 100.0
-            self._time_limit = 720
             from Algo.real_robot import Robot
             self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
                                 facing=NORTH,
@@ -87,17 +80,20 @@ class Window(Frame):
 
             self._paint_map()
 
+        self._explore_limit = COMPLETION_THRESHOLD
+        self._time_limit = 720
+
         # Initialize connention client thread
         self._sender = Message_Handler(self._receive_handler)
         self._auto_update = True
 
         print('Init complete!')
-        self._sender.send_rpi("Hello from PC to RPi")
+        self._sender.send_rpi("Hello from PC to RPi\n")
         # for i in range(100):
         #     self._sender.send_rpi("I")
         #     sleep(SLEEP_SEC)
-        self._sender.send_arduino("Hello from PC to Arduino")
-        self._sender.send_android("Hello from PC to Android")
+        self._sender.send_arduino("Hello from PC to Arduino\n")
+        self._sender.send_android("Hello from PC to Android\n")
 
         self._facing = self._robot.facing
         self._draw_robot(START, self._facing)
@@ -143,8 +139,8 @@ class Window(Frame):
         self._explore_label = Label(bg_frame, text="Explore Completion:")
         self._explore_label.grid(row=0, column=0)
 
-        self._percentage_completion_label = Label(bg_frame, text="0.0%")
-        self._percentage_completion_label.grid(row=0, column=1)
+        self._completion_label = Label(bg_frame, text="0")
+        self._completion_label.grid(row=0, column=1)
 
         self._time_limit_label = Label(bg_frame, text="Time Spent(seconds):")
         self._time_limit_label.grid(row=1, column=0)
@@ -190,7 +186,9 @@ class Window(Frame):
             print('Start FAST PATH')
             disable_print()
         elif msg == ANDROID_LOAD_EXPLORE_MAP:
-            self._load_explore_map()
+            thread = threading.Thread(target=self._load_explore_map)
+            thread.daemon = True
+            thread.start()
             enable_print()
             print('LOAD EXPLORE MAP')
             disable_print()
@@ -237,20 +235,16 @@ class Window(Frame):
         self._mark_way_point(get_grid_index(19 - row, col))
         disable_print()
 
-    # def _calibrate(self):
-    #     """
-    #     Calibrate the robot.
-    #
-    #     :return: N/A
-    #     """
-    #     if not self._is_sim:
-    #         self._sender.send_arduino('z')
-    #         self._sender.wait_arduino('D')
-    #         self._robot.turn_robot(self._sender, RIGHT)
-    #         self._robot.get_sensor_readings(self._sender)
-    #         self._robot.turn_robot(self._sender, LEFT)
-    #         self._sender.send_arduino('z')
-    #         self._sender.wait_arduino('D')
+    def _calibrate(self):
+        """
+        Calibrate the robot.
+
+        :return: N/A
+        """
+        if self._is_sim:
+            self._robot.calibrate()
+        else:
+            self._robot.calibrate(self._sender)
 
     def _update_android(self):
         """
@@ -264,8 +258,7 @@ class Window(Frame):
         msgs.append('"obstacleMap":"%s"'%self._robot.get_map_string())
         y, x = get_matrix_coords(self._robot.center)
         msgs.append('"robotPosition":"%s,%s,%s"' % (str(x), str(19 - y), str(self._robot.facing)))
-        if IS_ARROW_SCAN:
-            msgs.append('"arrowPosition":"{}"'.format(';'.join(self._robot.arrows_arduino)))
+        msgs.append('"arrowPosition":"{}"'.format(';'.join(self._robot.arrows_arduino)))
 
         self._sender.send_android('{' + ','.join(msgs) + '}')
 
@@ -290,15 +283,15 @@ class Window(Frame):
             try:
                 # Exploration until completion
                 while True:
-                    print('-' * 50)
+                    print('=' * 100)
 
                     updated_cells = run.send(0)
+
+                    print('-' * 50)
                     print('updated_cells (sensor_readings): {}'.format(updated_cells)) # sensor_reading
 
                     self._update_cells(updated_cells)
                     self._update_android()
-
-                    print_map_info(self._robot)
 
                     direction, move_or_turn, updated_cells = run.send(0)
                     print('direction, move_or_turn, updated_cells (robot standing): {}'.format((MOVEMENTS[direction], MOVE_TURN[move_or_turn], updated_cells)))
@@ -318,6 +311,7 @@ class Window(Frame):
                         self._turn_head(self._facing, direction)
 
                     self._update_android()
+                    print_map_info(self._robot)
 
                     is_complete = run.send(0)
                     if is_complete:
@@ -338,21 +332,28 @@ class Window(Frame):
 
                         # Move to unexplored area
                         while True:
-                            updated_or_moved, value, is_complete = run.send(0)
+                            print('=' * 100)
+                            updated_or_moved_or_turned, value, is_complete = run.send(0)
                             if self._is_sim:
                                 sleep(self._timestep)
                             if IS_SLEEP:
                                 sleep(SLEEP_SEC)
 
                             self._time_spent_label.config(text="%.2f" % get_time_elapsed(start_time) + "s")
-                            print_map_info(self._robot)
 
-                            if updated_or_moved == "updated":
+                            print('-' * 50)
+                            if updated_or_moved_or_turned == "updated":
                                 self._update_cells(value)
                                 self._update_android()
-                            elif updated_or_moved == "moved":
+                                print('updated_cells: {}'.format(value)) # sensor_reading
+                            elif updated_or_moved_or_turned == "moved":
                                 self._move_robot(value)
                                 self._update_android()
+                                print('moved robot: {}'.format(MOVEMENTS[value])) # sensor_reading
+                            elif updated_or_moved_or_turned == "turned":
+                                self._turn_head(self._facing, value)
+                                self._update_android()
+                                print('turned robot: {}'.format(MOVEMENTS[value])) # sensor_reading
                             else:
                                 # invalid (no path find)
                                 break
@@ -364,6 +365,8 @@ class Window(Frame):
                                 print_map_info(self._robot)
                                 disable_print()
                                 break
+                            print_map_info(self._robot)
+
                         break
 
                 # Returning to start after completion
@@ -391,7 +394,6 @@ class Window(Frame):
         self._calibrate_after_exploration()
 
         if IS_ARROW_SCAN:
-            # self._robot.postprocess_arrow_images()
             if self._robot.arrows:
                 for y, x, facing in self._robot.arrows:
                     self._draw_arrow(get_grid_index(y, x), facing)
@@ -408,7 +410,7 @@ class Window(Frame):
         :return: N/A
         """
         enable_print()
-        print('Calibrating...')
+        print('Calibrating for fast path...')
         disable_print()
         self._fastest_path = self._find_fastest_path()
 
@@ -417,10 +419,11 @@ class Window(Frame):
             self._robot.turn_robot(self._fastest_path[0])
             self._turn_head(self._facing, self._fastest_path[0])
         else:
-            print('Turning Robot')
-            self._robot.turn_robot(self._sender, self._fastest_path[0])
-            print('Robot Turned')
-            self._turn_head(self._facing, self._fastest_path[0])
+            if self._fastest_path[0] != FORWARD:
+                print('Turning Robot')
+                self._robot.turn_robot(self._sender, self._fastest_path[0])
+                print('Robot Turned')
+                self._turn_head(self._facing, self._fastest_path[0])
 
         self._fastest_path[0] = FORWARD
         self._update_android()
@@ -483,12 +486,14 @@ class Window(Frame):
                     self._sender.send_arduino(move_str)
 
                     for cmd in move_str:
+                        self._sender.wait_arduino(ARDUIMO_MOVED)
+
                         self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
                         if convert_arduino_cmd_to_direction(cmd) == FORWARD:
                             self._move_robot(convert_arduino_cmd_to_direction(cmd))
                         else:
                             self._turn_head(self._facing, convert_arduino_cmd_to_direction(cmd))
-                        self._sender.wait_arduino(ARDUIMO_MOVED)
+
                         self._update_android()
 
             enable_print()
@@ -703,7 +708,7 @@ class Window(Frame):
             for y, x, facing in self._robot.arrows:
                 self._draw_arrow(get_grid_index(y, x), facing)
 
-        self._percentage_completion_label.config(text=("%.2f" % self._robot.get_completion_percentage() + "%"))
+        self._completion_label.config(text=(str(self._robot.get_completion_count())))
 
     def _load_map(self):
         """
@@ -711,16 +716,16 @@ class Window(Frame):
 
         :return: True if the file exists and is able to be successfully parsed, false otherwise.
         """
-        filename = askopenfilename(title="Select Map Descriptor", filetypes=[("Text Files (*.txt)", "*.txt")])
+        self._filename = askopenfilename(title="Select Map Descriptor", filetypes=[("Text Files (*.txt)", "*.txt")])
 
-        if filename:
-            print(filename)
-            if self._parse_map(filename):
+        if self._filename:
+            print(self._filename)
+            if self._parse_map(self._filename):
                 self._paint_map()
                 return True
-            print("File %s cannot be parsed" % filename)
+            print("File %s cannot be parsed" % self._filename)
             return False
-        print("File %s does not exist" % filename)
+        print("File %s does not exist" % self._filename)
         return False
 
     def _mark_way_point(self, grid_num):
@@ -747,7 +752,7 @@ class Window(Frame):
         if match:
             self._grid_map = []
             row_strings = map_str.split("\n")
-            for row_string in row_strings:
+            for row_string in row_strings[:NUM_ROWS]:
                 grid_row = []
                 for char in row_string:
                     bit = int(char)

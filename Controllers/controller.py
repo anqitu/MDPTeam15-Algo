@@ -25,6 +25,8 @@ class Controller:
         Initialize the Controller class.
         """
 
+        self._filename = ''
+
         self._is_sim = IS_SIMULATE_MODE
 
         if self._is_sim:
@@ -42,14 +44,7 @@ class Controller:
                     elif ans.lower() == 'n':
                         exit()
 
-            # self._timestep = 0.1
             self._timestep = float(input("Timestep: ").strip())
-            self._explore_limit = 100
-            # self._explore_limit = float(input("Coverage Limit: ").strip())
-            # self._time_limit = float(input("Time Limit: ").strip())
-            self._time_limit = 100
-            # self._time_limit = 100
-
             from Algo.sim_robot import Robot
             self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
                                 facing=NORTH,
@@ -57,13 +52,13 @@ class Controller:
                                 real_map=[[]])
         else:
             print('Real run')
-
-            self._explore_limit = 100.0
-            self._time_limit = 720
             from Algo.real_robot import Robot
             self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
                                 facing=NORTH,
                                 discovered_map=[[2] * ROW_LENGTH for _ in range(COL_LENGTH)])
+
+        self._explore_limit = COMPLETION_THRESHOLD
+        self._time_limit = 720
 
         # Initialize connention client thread
         self._sender = Message_Handler(self._receive_handler)
@@ -82,7 +77,9 @@ class Controller:
         :param msg: The message received from the Android device.
         :return: N/A
         """
-        if msg == ANDROID_CALIBRATE:
+        if msg[0:8] == ANDROID_WAYPOINT:
+            self._set_way_point(msg[8:])
+        elif msg == ANDROID_CALIBRATE:
             thread = threading.Thread(target=self._calibrate)
             thread.daemon = True
             thread.start()
@@ -96,22 +93,28 @@ class Controller:
             enable_print()
             print('Start EXPLORATION')
             disable_print()
-        elif msg[0:8] == ANDROID_WAYPOINT:
-            self._set_way_point(msg[8:])
         elif msg == ANDROID_MOVE_FAST_PATH:
             thread = threading.Thread(target=self._move_fastest_path)
             thread.daemon = True
             thread.start()
+            enable_print()
+            print('Start FAST PATH')
+            disable_print()
+        elif msg == ANDROID_LOAD_EXPLORE_MAP:
+            thread = threading.Thread(target=self._load_explore_map)
+            thread.daemon = True
+            thread.start()
+            enable_print()
+            print('LOAD EXPLORE MAP')
+            disable_print()
         elif msg == ANDROID_FORWARD:
-            self._sender.send_arduino(ARDUINO_MOVE_FORWARD)
+            self._sender.send_arduino(ARDUINO_FORWARD)
         elif msg == ANDROID_TURN_LEFT:
             self._sender.send_arduino(ARDUINO_TURN_LEFT)
         elif msg == ANDROID_TURN_RIGHT:
             self._sender.send_arduino(ARDUINO_TURN_RIGHT)
-        elif msg == ANDROID_BACK:
-            self._sender.send_arduino(ARDUINO_BACKWARD)
-        elif msg == ANDROID_SENSOR:
-            self._sender.send_arduino(ARDUINO_SENSOR)
+        elif msg == ANDROID_TURN_TO_BACKWARD:
+            self._sender.send_arduino(ARDUINO_TURN_TO_BACKWARD)
 
 
     def _set_way_point(self, coordinate):
@@ -122,9 +125,9 @@ class Controller:
         :return: N/A
         """
         enable_print()
-        print('Set Waypoint: {}'.format(coordinate))
         (col, row) = literal_eval(coordinate)
-        self._way_point = (row, col)
+        self._way_point = (19 - row, col)
+        print('Set Waypoint: {}'.format(self._way_point))
         disable_print()
 
     def _calibrate(self):
@@ -133,56 +136,30 @@ class Controller:
 
         :return: N/A
         """
-        if not self._is_sim:
-            self._sender.send_android('{"status":"calibrating"}')
-            self._sender.send_arduino('z')
-            self._sender.wait_arduino('D')
-            self._robot.turn_robot(self._sender, RIGHT)
-            self._robot.get_sensor_readings(self._sender)
-            self._robot.turn_robot(self._sender, LEFT)
-            self._sender.send_arduino('z')
-            self._sender.wait_arduino('D')
-        self._sender.send_android('{"status":"calibrating done"}')
+        if self._is_sim:
+            self._robot.calibrate()
+        else:
+            self._robot.calibrate(self._sender)
 
-    def _update_map_android(self):
-        """
-        Send the latest MDF strings to the Android device.
-
-        :return: N/A
-        """
-        self._sender.send_android('{"exploreMap":"%s","obstacleMap":"%s"}' % (self._robot.get_explore_string(), self._robot.get_map_string()))
-
-    def _update_coords_android(self):
-        """
-        Send the latest coordinates and facing of the robot to the Android device.
-
-        :return: N/A
-        """
-        y, x = get_matrix_coords(self._robot.center)
-        self._sender.send_android('{"robotPosition":[%s,%s,%s]}' % (str(x), str(y), str(self._robot.facing)))
-
-    def _update_android(self, is_update_map, is_update_coords, override=False):
+    def _update_android(self):
         """
         Send the latest updates to the Android device.
 
-        :param is_update_map: Whether the latest MDF string should be updated.
-        :param is_update_coords: Whether the latest coordinates and facing should be updated.
-        :param override: If this is set to true, the update will be sent even when the Android is not in auto-update.
         :return: N/A
         """
-        if self._auto_update or override:
-            if is_update_map:
-                self._update_map_android()
-            if is_update_coords:
-                self._update_coords_android()
+        msgs = []
+        # Send the latest MDF strings to the Android device.
+        msgs.append('"exploreMap":"%s"'%self._robot.get_explore_string())
+        msgs.append('"obstacleMap":"%s"'%self._robot.get_map_string())
+        y, x = get_matrix_coords(self._robot.center)
+        msgs.append('"robotPosition":"%s,%s,%s"' % (str(x), str(19 - y), str(self._robot.facing)))
+        if IS_ARROW_SCAN:
+            msgs.append('"arrowPosition":"{}"'.format(';'.join(self._robot.arrows_arduino)))
+
+        self._sender.send_android('{' + ','.join(msgs) + '}')
 
     def _explore(self):
-        """
-        Conduct the exploration.
-
-        :return: N/A
-        """
-        enable_print()
+        """Start the exploration."""
 
         start_time = time()
         if self._is_sim:
@@ -194,33 +171,44 @@ class Controller:
         else:
             run = exploration.start_real(self._sender)
 
-        next(run) # Robot Standing
-        self._update_android(True, True)
+        initial_pos = next(run)
+        self._update_android()
+
         while True:
             try:
                 # Exploration until completion
                 while True:
+                    print('=' * 100)
+
+                    updated_cells = run.send(0)
+
                     print('-' * 50)
+                    print('updated_cells (sensor_readings): {}'.format(updated_cells)) # sensor_reading
 
-                    run.send(0) # empty updated_cells
-                    self._update_android(True, True)
+                    self._update_android()
 
-                    print_map_info(self._robot)
+                    direction, move_or_turn, updated_cells = run.send(0)
+                    print('direction, move_or_turn, updated_cells (robot standing): {}'.format((MOVEMENTS[direction], MOVE_TURN[move_or_turn], updated_cells)))
 
-                    run.send(0) # robot movement
                     if self._is_sim:
                         sleep(self._timestep)
 
-                    self._update_android(True, True)
+                    if IS_SLEEP:
+                        sleep(SLEEP_SEC)
 
-                    is_complete = run.send(0) # is_complete
+                    self._update_android()
+                    print_map_info(self._robot)
+
+                    is_complete = run.send(0)
                     if is_complete:
+                        self._update_android()
+
                         enable_print()
                         print_map_info(self._robot)
                         disable_print()
                         break
 
-                    is_back_at_start = run.send(0) # is_back_to_start
+                    is_back_at_start = run.send(0)
                     if is_back_at_start:
 
                         enable_print()
@@ -228,23 +216,38 @@ class Controller:
                         print_map_info(self._robot)
                         disable_print()
 
+                        # Move to unexplored area
                         while True:
-                            updated_or_moved, value, is_complete = run.send(0)
-                            print_map_info(self._robot)
-
+                            print('=' * 100)
+                            updated_or_moved_or_turned, value, is_complete = run.send(0)
                             if self._is_sim:
                                 sleep(self._timestep)
-                            if updated_or_moved == "updated" or updated_or_moved == "moved":
-                                self._update_android(True, True)
+                            if IS_SLEEP:
+                                sleep(SLEEP_SEC)
+
+                            print('-' * 50)
+                            if updated_or_moved_or_turned == "updated":
+                                self._update_android()
+                                print('updated_cells: {}'.format(value)) # sensor_reading
+                            elif updated_or_moved_or_turned == "moved":
+                                self._update_android()
+                                print('moved robot: {}'.format(MOVEMENTS[value])) # sensor_reading
+                            elif updated_or_moved_or_turned == "turned":
+                                self._update_android()
+                                print('turned robot: {}'.format(MOVEMENTS[value])) # sensor_reading
                             else:
                                 # invalid (no path find)
                                 break
 
                             if is_complete:
+                                self._update_android()
+
                                 enable_print()
                                 print_map_info(self._robot)
                                 disable_print()
                                 break
+                            print_map_info(self._robot)
+
                         break
 
                 # Returning to start after completion
@@ -252,52 +255,27 @@ class Controller:
                 print("Returning to Start...")
                 disable_print()
                 while True:
-                    run.send(0)
+                    direction = run.send(0)
                     if self._is_sim:
                         sleep(self._timestep)
+                    if IS_SLEEP:
+                        sleep(SLEEP_SEC)
 
-                    self._update_android(True, True)
+                    self._update_android()
 
-            # Raised by an iterator’s next() method to signal that there are no further values.
             except StopIteration:
-                if not self._is_sim:
-                    # Adjust robot position to face to North
-                    enable_print()
-                    print_map_info(self._robot)
-                    print('Returned to start!')
-
-                    self._sender.send_arduino('j')
-                    self._sender.wait_arduino('U')
-                    if self._robot.facing == WEST:
-                        print('ENTERED FACING WEST')
-                        sleep(0.05)
-                        self._robot.turn_robot(self._sender, LEFT)
-                        self._sender.send_arduino('j')
-                        self._sender.wait_arduino('U')
-                        self._robot.turn_robot(self._sender, RIGHT)
-                        sleep(0.05)
-                        self._robot.turn_robot(self._sender, RIGHT)
-                        sleep(0.05)
-                        self._sender.send_arduino('x')
-                        self._sender.wait_arduino('D')
-                    elif self._robot.facing == SOUTH:
-                        print('ENTERED FACING SOUTH')
-                        sleep(0.05)
-                        self._robot.turn_robot(self._sender, RIGHT)
-                        self._sender.send_arduino('j')
-                        self._sender.wait_arduino('U')
-                        sleep(0.05)
-                        self._robot.turn_robot(self._sender, RIGHT)
-                        sleep(0.05)
-                        self._sender.send_arduino('x')
-                        self._sender.wait_arduino('D')
-
-                    disable_print()
+                print_map_info(self._robot)
                 break
 
         enable_print()
-        print('Calibrating...')
+        print('Exploration Done')
+        disable_print()
+
         self._calibrate_after_exploration()
+
+        self._update_android()
+        enable_print()
+        print_map_info(self._robot)
         disable_print()
 
     def _calibrate_after_exploration(self):
@@ -306,17 +284,22 @@ class Controller:
 
         :return: N/A
         """
+        enable_print()
+        print('Calibrating for fast path...')
+        disable_print()
         self._fastest_path = self._find_fastest_path()
 
         if self._is_sim:
             sleep(self._timestep)
             self._robot.turn_robot(self._fastest_path[0])
         else:
-            self._robot.turn_robot(self._sender, self._fastest_path[0])
+            if self._fastest_path[0] != FORWARD:
+                print('Turning Robot')
+                self._robot.turn_robot(self._sender, self._fastest_path[0])
+                print('Robot Turned')
+
         self._fastest_path[0] = FORWARD
-        self._update_android(True, True)
-        self._sender.send_android('{"status":"explore done"}')
-        self._sender.send_android('{"status":"calibrating done"}')
+        self._update_android()
 
         enable_print()
         print('Calibrating Done!')
@@ -348,31 +331,37 @@ class Controller:
         return fastest_path_start_way_point + fastest_path_way_point_goal
 
     def _move_fastest_path(self):
-        """Move along the fastest path to the goal zone."""
+        """Move the robot along the fastest path."""
         if self._fastest_path:
-            move_str = get_fastest_path_move_string(self._fastest_path)
-            print('Move String: {}'.format(move_str))
+            self._robot.is_fast_path = True
+            move_strs = get_fastest_path_move_strs(self._fastest_path)
+            enable_print()
+            print('Move String: {}'.format(move_strs))
+            disable_print()
 
             if self._is_sim:
-                for move in self._fastest_path:
-                    sleep(self._timestep)
-                    self._robot.move_robot(move)
-                    self._update_android(False, True)
+                move_strs = get_fastest_path_move_strs(self._fastest_path)
+                for move_str in move_strs:
+                    self._sender.send_arduino(move_str)
+
+                    for cmd in move_str:
+                        sleep(self._timestep)
+                        self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
+                        self._update_android()
+
             else:
-                # 'nn/a/n/d/nnnnn'.split('/') = ['nn', 'a', 'n', 'd', 'nnnnn']
-                move_str = get_fastest_path_move_string(self._fastest_path)
-                moves = move_str.split('/')
-                for move in moves:
-                    move_len = len(move)
-                    if move[0] == 'n':
-                        move = move[:-1] + 't'
-                    elif move[0] == 'a' or move[0] == 'd':
-                        pass
-                    self._sender.send_arduino(move)
-                    for i in range(move_len):
-                        self._sender.wait_arduino('M')
+                move_strs = get_fastest_path_move_strs(self._fastest_path)
+                for move_str in move_strs:
+                    self._sender.send_arduino(move_str)
+
+                    for cmd in move_str:
+                        self._sender.wait_arduino(ARDUIMO_MOVED)
+
+                        self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
+                        self._update_android()
+
             enable_print()
-            print('GOAL Reached!')
+            print('Reached GOAL!')
             disable_print()
         else:
             enable_print()
@@ -385,15 +374,16 @@ class Controller:
 
         :return: True if the file exists and is able to be successfully parsed, false otherwise.
         """
-        filename = askopenfilename(title="Select Map Descriptor", filetypes=[("Text Files (*.txt)", "*.txt")])
+        self._filename = askopenfilename(title="Select Map Descriptor", filetypes=[("Text Files (*.txt)", "*.txt")])
 
-        if filename:
-            print(filename)
-            if self._parse_map(filename):
+        if self._filename:
+            print(self._filename)
+            if self._parse_map(self._filename):
+                self._paint_map()
                 return True
-            print("File %s cannot be parsed" % filename)
+            print("File %s cannot be parsed" % self._filename)
             return False
-        print("File %s does not exist" % filename)
+        print("File %s does not exist" % self._filename)
         return False
 
     def _parse_map(self, filename):
@@ -410,7 +400,7 @@ class Controller:
         if match:
             self._grid_map = []
             row_strings = map_str.split("\n")
-            for row_string in row_strings:
+            for row_string in row_strings[:NUM_ROWS]:
                 grid_row = []
                 for char in row_string:
                     bit = int(char)

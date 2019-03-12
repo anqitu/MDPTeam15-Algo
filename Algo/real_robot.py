@@ -28,20 +28,23 @@ class Robot:
         self.arrows = []
         self.arrows_arduino = []
         self.arrows_results = []
+        self.move_counts = 1
+        self.is_calibration_time = False
         self.sensors = [
             #   2 3 4
             # 1       5
             # 0
             #
-            {"mount_loc": WS, "facing": WEST, "range": 3, "blind_spot": 0},
+            {"mount_loc": SWS, "facing": WEST, "range": 3, "blind_spot": 0},
             {"mount_loc": NWS, "facing": WEST, "range": 3, "blind_spot": 0},
             {"mount_loc": NWS, "facing": NORTH, "range": 3, "blind_spot": 0},
             {"mount_loc": NS, "facing": NORTH, "range": 3, "blind_spot": 0},
             {"mount_loc": NES, "facing": NORTH, "range": 3, "blind_spot": 0},
             {"mount_loc": NES, "facing": EAST, "range": 5, "blind_spot": 3}
         ]
+        self.real_map = []
 
-        regex_str = '^(\d*,){%s}$' % (len(self.sensors) * 1)
+        regex_str = '^(\d*,){%s}$' % (len(self.sensors))
         self._readings_regex_arduino = re.compile(regex_str)
 
         regex_str = '[01]{2}'
@@ -51,7 +54,7 @@ class Robot:
         """
         Mark the probability of a cell being an obstacle.
 
-        If the cell has > 50% chance of being an obstacle, mark the cell as
+        If the cell has >= 50% chance of being an obstacle, mark the cell as
         an obstacle. Ignore cells that have been marked as guaranteed non-obstacles.
 
         :param cell: The number of the cell being marked.
@@ -81,7 +84,7 @@ class Robot:
 
         if self.discovered_map[y][x] != value:
             self.discovered_map[y][x] = value
-            return get_grid_index(y, x), int(prob_obstacle / prob_total > 0.5)
+            return get_grid_index(y, x), value
 
         return None, None
 
@@ -102,9 +105,11 @@ class Robot:
         if not self.exploration_status[y][x]:
             self.exploration_status[y][x] = 1
 
-        self.discovered_map[y][x] = 0
+        if self.discovered_map[y][x] != 0:
+            self.discovered_map[y][x] = 0
+            return True
 
-        return True
+        return False
 
     def _mark_arrow_taken(self, y, x, camera_facing):
         """
@@ -117,26 +122,13 @@ class Robot:
         """
 
         self.arrow_taken_status[y][x][camera_facing] = 1
-        print('Mark Arrow Taken at {}'.format((x, y, DIRECTIONS[camera_facing])))
+        print('Mark Arrow Taken @ {}'.format((x, y, DIRECTIONS[camera_facing])))
 
         return True
 
-    # def _take_arrow_images(self):
-    #     """
-    #     Take photo of a potential arrow
-    #
-    #     # :param msg: The y-coordinate, x-coordinate of the cell to be marked and The facing of the robot when the photo was taken.
-    #     """
-    #     # self.arrow_taken_positions.append(msg)
-    #     sender.send_rpi(API_TAKEN_PHOTO)
-    #     # sender.wait_rpi(API_TAKEN_PHOTO)
-    #     # sender.wait_rpi('Y')
-    #     # self.arrows_results.append(result)
-    #     print('Take Arrow Image at {}'.format(msg))
-
     def _mark_arrows(self, position, result):
         y, x, facing = tuple([int(_) for _ in position.split(',')])
-        print('Recognizing Image taken with robot position@ {}'.format((x, y, DIRECTIONS[facing])))
+        print('Recognizing Image taken with robot position @ {}'.format((x, y, DIRECTIONS[facing])))
         discovered_map = self.discovered_map
 
         camera_facing = (facing + CAMERA_FACING) % 4
@@ -198,19 +190,6 @@ class Robot:
         except IndexError:
             return
 
-    # def postprocess_arrow_images(self):
-    #     print('Start postprocessing arrow images')
-    #     print('TODO......')
-    #     print('Detected Arrows @')
-    #     for _ in self.arrows:
-    #         j, i, camera_facing = _
-    #         print((i, j, DIRECTIONS[camera_facing]))
-    #         self.arrows_arduino.append(','.join([str(i), str(19-j), str(camera_facing)]))
-    #     print('Arduino Version:')
-    #     for _ in self.arrows_arduino:
-    #         print(_)
-
-
     def in_efficiency_limit(self):
         """
         Check if the robot is one grid before the maximum limit of the maze.
@@ -225,7 +204,6 @@ class Robot:
                 or (self.center in E_LIMITS[SOUTH] and self.facing == WEST) \
                 or (self.center in E_LIMITS[WEST] and self.facing == NORTH):
             return True
-
         return False
 
     def mark_robot_standing(self):
@@ -242,18 +220,18 @@ class Robot:
 
         return updated_cells
 
-    def get_completion_percentage(self):
+    def get_completion_count(self):
         """
-        Calculate how much of the maze the robot has explored in percentage.
+        Calculate how many of the cells the robot has explored in percentage.
 
-        :return: The percentage of the map the robot has explored.
+        :return: The count of the cells the robot has explored.
         """
         count = 0
         for row in self.exploration_status:
             for i in row:
                 count += i
 
-        return (count / (NUM_COLS * NUM_ROWS)) * 100.0
+        return count
 
     def is_complete(self, explore_limit, start_time, time_limit):
         """
@@ -264,7 +242,19 @@ class Robot:
         :param time_limit: The maximum time that the robot was allowed to explore until.
         :return: True if the exploration should be stopped, false otherwise.
         """
-        return self.get_completion_percentage() >= explore_limit \
+        return self.get_completion_count() >= 300 \
+            or float(time() - start_time >= time_limit)
+
+    def is_complete_after_back_to_start(self, explore_limit, start_time, time_limit):
+        """
+        Check if the exploration is complete based on the exploration limit and the time limit.
+
+        :param explore_limit: The percentage of the maze up to which the robot is allowed to explore.
+        :param start_time: The start time of the exploration
+        :param time_limit: The maximum time that the robot was allowed to explore until.
+        :return: True if the exploration should be stopped, false otherwise.
+        """
+        return self.get_completion_count() >= explore_limit \
             or float(time() - start_time >= time_limit)
 
     def turn_robot(self, sender, direction):
@@ -281,10 +271,12 @@ class Robot:
 
         sender.send_arduino(get_arduino_cmd(direction))
         self.facing = (self.facing + direction) % 4
+        self.move_counts += 1
 
         sender.wait_arduino(ARDUIMO_MOVED)
 
-        self.calibrate(sender)
+        if self.is_calibrate_possible():
+            self.calibrate(sender)
 
         if IS_ARROW_SCAN and not self.is_fast_path:
             self.check_arrow(sender)
@@ -312,21 +304,20 @@ class Robot:
         elif self.facing == WEST:
             self.center -= 1
 
-        sender.wait_arduino(ARDUIMO_MOVED)
+        self.move_counts += 1
+        updated_cells = self.mark_robot_standing()
 
-        self.calibrate(sender)
+        sender.wait_arduino(ARDUIMO_MOVED)
 
         if IS_ARROW_SCAN and not self.is_fast_path:
             self.check_arrow(sender)
-
-        updated_cells = self.mark_robot_standing()
 
         return updated_cells
 
     def calibrate(self, sender):
         print('Calibrating')
-        # sender.send_arduino('C')
-        # sender.wait_arduino('C')
+        sender.send_arduino('C')
+        sender.wait_arduino('C')
 
 
     def move_robot_algo(self, direction):
@@ -334,7 +325,7 @@ class Robot:
         Turn the algo robot in a chosen direction or forward it
 
         :param direction: The direction to turn (FORWARD, LEFT, RIGHT, BACKWARD)
-        :return: Nothing. Stops the method if the direction is FORWARD to save time as the robot does not need to turn.
+        :return: Nothing.
         """
         if direction == FORWARD:
             if self.facing == NORTH:
@@ -356,8 +347,7 @@ class Robot:
         :return: true if the robot is able to take one step in that direction, false otherwise
         """
 
-        print('Check Free......')
-        print('Direction: {}'.format(MOVEMENTS[direction]))
+        print('Checking Free towards {}'.format(MOVEMENTS[direction]))
 
         true_bearing = (self.facing + direction) % 4
         robot_cells = get_robot_cells(self.center)
@@ -404,65 +394,67 @@ class Robot:
                 print('West: ' + str(is_free))
                 return is_free
         except IndexError:
+            print('ie')
             return False
 
-    # def is_calibrate_possible(self):
-    #     print('Checking Whether Calibration Possible...')
-    #
-    #     y, x = get_matrix_coords(self.center)
-    #     discovered_map = self.discovered_map
-    #     arrow_taken_status = self.arrow_taken_status
-    #     facing = self.facing
-    #     sensor_facing = (facing + WEST) % 4
-    #
-    #     print('Robot Position@ {}'.format((x, y, facing)))
-    #
-    #     try:
-    #         if sensor_facing == WEST:
-    #             cells_middle = []
-    #             cells_right = []
-    #             for distance in range(2, 5):
-    #                 new_x = x - distance
-    #                 if new_x < 0:
-    #                     cells_middle.append(1)
-    #                     cells_right.append(1)
-    #                 else:
-    #                     cells_middle.append(discovered_map[y][new_x])
-    #                     cells_right.append(discovered_map[y + 1][new_x])
-    #             print('cells_middle: {}'.format(cells_middle))
-    #             print('cells_right: {}'.format(cells_right))
-    #
-    #             if 1 in cells_middle and 1 in cells_right:
-    #                 if cells_middle.index(1) == cells_right.index(1):
-    #                     return True
-    #         # elif sensor_facing == NORTH:
-    #         #     new_y = y + distance
-    #         #     if new_y > 19:
-    #         #         raise IndexError
-    #         #     for i, j in [(x - 1, new_y), (x, new_y)]:
-    #         #         print('Checking %s,%s' % (i, j))
-    #         #         if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
-    #         #             return True
-    #         # elif sensor_facing == EAST:
-    #         #     new_x = x + distance
-    #         #     if new_x > 14:
-    #         #         raise IndexError
-    #         #     for i, j in [(new_x, y + 1), (new_x, y)]:
-    #         #         print('Checking %s,%s' % (i, j))
-    #         #         if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
-    #         #             return True
-    #         # elif sensor_facing == SOUTH:
-    #         #     new_y = y - distance
-    #         #     if new_y < 0:
-    #         #         raise IndexError
-    #         #     for i, j in [(x + 1, new_y), (x, new_y)]:
-    #         #         print('Checking %s,%s' % (i, j))
-    #         #         if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
-    #         #             return True
-    #
-    #     except IndexError:
-    #         print('ie')
-    #         return True
+    def is_calibrate_possible(self):
+        print('Checking Whether Calibration Possible...')
+
+        y, x = get_matrix_coords(self.center)
+        discovered_map = self.discovered_map
+        facing = self.facing
+        sensor_facing = (facing + WEST) % 4
+
+        print('Robot Position @ {}'.format((x, y, facing)))
+
+        cells_left = []
+        cells_right = []
+
+        if sensor_facing == WEST:
+            for distance in range(2, 5):
+                new_x = x - distance
+                if new_x < 0:
+                    cells_left.append(1)
+                    cells_right.append(1)
+                else:
+                    cells_left.append(discovered_map[y - 1][new_x])
+                    cells_right.append(discovered_map[y + 1][new_x])
+        elif sensor_facing == NORTH:
+            for distance in range(2, 5):
+                new_y = y + distance
+                if new_y > 19:
+                    cells_left.append(1)
+                    cells_right.append(1)
+                else:
+                    cells_left.append(discovered_map[new_y][x - 1])
+                    cells_right.append(discovered_map[new_y][x + 1])
+        elif sensor_facing == EAST:
+            for distance in range(2, 5):
+                new_x = x + distance
+                if new_x > 14:
+                    cells_left.append(1)
+                    cells_right.append(1)
+                else:
+                    cells_left.append(discovered_map[y + 1][new_x])
+                    cells_right.append(discovered_map[y - 1][new_x])
+        elif sensor_facing == SOUTH:
+            for distance in range(2, 5):
+                new_y = y - distance
+                if new_y < 0:
+                    cells_left.append(1)
+                    cells_right.append(1)
+                else:
+                    cells_left.append(discovered_map[new_y][x + 1])
+                    cells_right.append(discovered_map[new_y][x - 1])
+
+        print('cells_left: {}'.format(cells_left))
+        print('cells_right: {}'.format(cells_right))
+
+        if 1 in cells_left and 1 in cells_right:
+            if cells_left.index(1) == cells_right.index(1):
+                return True
+
+        return False
 
     def is_arrow_possible(self):
         """
@@ -485,45 +477,59 @@ class Robot:
         facing = self.facing
         camera_facing = (facing + CAMERA_FACING) % 4
 
+        flag = False
+
         try:
             distance = 2
             if camera_facing == WEST:
                 new_x = x - distance
                 if new_x < 0:
                     raise IndexError
-
                 for i, j in [(new_x, y - 1), (new_x, y)]:
-                    print('Checking %s,%s' % (i, j))
+                    print('Checking arrow @ %s,%s' % (i, j))
                     if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
+                        flag = True
+                if flag:
+                    for i, j in [(new_x, y - 1), (new_x, y)]:
                         self._mark_arrow_taken(j, i, camera_facing)
-                        return True
+                return flag
             elif camera_facing == NORTH:
                 new_y = y + distance
                 if new_y > 19:
                     raise IndexError
                 for i, j in [(x - 1, new_y), (x, new_y)]:
-                    print('Checking %s,%s' % (i, j))
+                    print('Checking arrow @ %s,%s' % (i, j))
                     if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
+                        flag = True
+                if flag:
+                    for i, j in [(x - 1, new_y), (x, new_y)]:
                         self._mark_arrow_taken(j, i, camera_facing)
-                        return True
+                return flag
             elif camera_facing == EAST:
                 new_x = x + distance
                 if new_x > 14:
                     raise IndexError
                 for i, j in [(new_x, y + 1), (new_x, y)]:
-                    print('Checking %s,%s' % (i, j))
+                    print('Checking arrow @ %s,%s' % (i, j))
                     if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
+                        flag = True
+                if flag:
+                    for i, j in [(new_x, y + 1), (new_x, y)]:
                         self._mark_arrow_taken(j, i, camera_facing)
-                        return True
+                return flag
             elif camera_facing == SOUTH:
                 new_y = y - distance
                 if new_y < 0:
                     raise IndexError
                 for i, j in [(x + 1, new_y), (x, new_y)]:
-                    print('Checking %s,%s' % (i, j))
+                    print('Checking arrow @ %s,%s' % (i, j))
                     if discovered_map[j][i] == 1 and not arrow_taken_status[j][i][camera_facing]:
+                        flag = True
+                if flag:
+                    for i, j in [(x + 1, new_y), (x, new_y)]:
                         self._mark_arrow_taken(j, i, camera_facing)
-                        return True
+                return flag
+
         except IndexError:
             return False
 
@@ -541,7 +547,6 @@ class Robot:
         if self.is_arrow_possible():
             print('Arrow Possible @ Robot Position: {}'.format((x, y, DIRECTIONS[self.facing])))
             position = '%s,%s,%s' % (y, x, self.facing)
-            # self._take_arrow_images()
             sender.send_rpi(API_TAKEN_PHOTO)
             result = sender.wait_rpi(self._readings_regex_rpi, is_regex=True)
             self._mark_arrows(position, result)
@@ -572,6 +577,7 @@ class Robot:
         sensors = self.sensors[:]
         sensor_index = sensors.index
         updated_cells = {}
+        is_blind_range_undetected_obstacle = False
 
         for sensor in sensors:
             true_facing = (sensor["facing"] + self.facing) % 4
@@ -700,9 +706,51 @@ class Robot:
                         break
                 print('br')
 
+            elif sensor_index(sensor) == 5 and reading in blind_range:
+                print('Long Range Sensor: Obstacle observed in blind range')
+                blind_range_obstacle_status = []
+                for cell in blind_range:
+                    try:
+                        if true_facing == NORTH:
+                            to_explore = (y + cell, x)
+                        elif true_facing == EAST:
+                            to_explore = (y, x + cell)
+                        elif true_facing == SOUTH:
+                            to_explore = (y - cell, x)
+                        elif true_facing == WEST:
+                            to_explore = (y, x - cell)
+
+                        if to_explore[0] < 0 or to_explore[0] > 19 or to_explore[1] < 0 or to_explore[1] > 14:
+                            print('ie')
+                            raise IndexError
+                        blind_range_obstacle_status.append(self.discovered_map[to_explore[0]][to_explore[1]])
+
+                    except IndexError:
+                        break
+                print('br')
+                print('blind_range_obstacle_status: {}'.format(blind_range_obstacle_status))
+                if len(blind_range_obstacle_status) != 0:
+                    if 2 in blind_range_obstacle_status:
+                        if 1 not in blind_range_obstacle_status:
+                            is_blind_range_undetected_obstacle = True
+                        else:
+                            is_blind_range_undetected_obstacle = blind_range_obstacle_status.index(1) > blind_range_obstacle_status.index(2)
             else:
                 print('Unacceptable Reading')
-        return updated_cells
+
+        print('-' * 50)
+        print('Total move counts: {}'.format(self.move_counts))
+        if self.move_counts % CALIBRATION_STEPS == 0:
+            self.is_calibration_time = True
+            print('Time to Calibrate')
+        if self.is_calibration_time and self.is_calibrate_possible():
+            self.calibrate(sender)
+            self.is_calibration_time = False
+
+        # if IS_ARROW_SCAN and not self.is_fast_path:
+        #     self.check_arrow()
+
+        return updated_cells, is_blind_range_undetected_obstacle
 
     def get_explore_string(self):
         """ Build and return the MDF string of the exploration status at the time of calling this function. """

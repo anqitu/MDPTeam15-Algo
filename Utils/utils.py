@@ -145,6 +145,7 @@ def convert_obstacle_string_to_map(obstacle_string, explore_map):
     return discovered_map
 
 def print_map_info(robot):
+    print('-' * 50)
     msgs = []
     msgs.append('"exploreMap":"%s"'%robot.get_explore_string())
     msgs.append('"obstacleMap":"%s"'%robot.get_map_string())
@@ -168,3 +169,10 @@ def print_map_info(robot):
         print('Arrow Taken Status Map:')
         for _ in robot.arrow_taken_status[::-1]:
             print(_)
+
+    if robot.real_map:
+        print('Real Map:')
+        for _ in robot.real_map:
+            print(_)
+
+    print()

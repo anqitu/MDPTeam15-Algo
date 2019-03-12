@@ -41,59 +41,82 @@ class Exploration:
         yield self._robot.mark_robot_standing()  # Mark initial robot space explored
 
         is_back_at_start = False
+        is_leave_start = False
         while True:
             try:
                 while not is_back_at_start:
-                    updated_cells = self._robot.get_sensor_readings()
+                    updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings()
                     yield updated_cells
+
+                    if is_blind_range_undetected_obstacle:
+                        if self._robot.check_free(LEFT) or self._robot.check_free(FORWARD):
+                            self._robot.turn_robot(RIGHT)
+                            print('Blind Range Undetected Obstacle Observed: Turn right to get sensor reading')
+                            yield RIGHT, TURN, {}
+
+                            is_complete = False
+                            yield is_complete
+
+                            is_back_at_start = False
+                            yield is_back_at_start
+
+                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings()
+                            yield updated_cells
+
+                            print('Turn Left to get back to original track')
+                            self._robot.turn_robot(LEFT)
+                            yield LEFT, TURN, {}
+                            yield is_complete
+                            yield is_back_at_start
+
+                            updated_cells = {}
+                            yield updated_cells
 
                     in_efficiency_limit = self._robot.in_efficiency_limit()
 
-                    # If in efficient limit, check forward first, otherwise, check left first
-                    if not in_efficiency_limit and self._robot.check_free(LEFT):
-                        updated_cells = self._robot.move_robot(LEFT)
-                        print('LEFT Free')
-                        yield LEFT, MOVE, updated_cells
-                    elif self._robot.check_free(FORWARD):
-                        print('Forward Free')
-                        updated_cells = self._robot.move_robot(FORWARD)
-                        yield FORWARD, MOVE, updated_cells
-                    else:
-                        if in_efficiency_limit:
-                            print('Robot in efficiency limit.... ')
+                    if not in_efficiency_limit:
 
-                            self._robot.turn_robot(RIGHT)
-                            yield RIGHT, TURN, {}
-
-                            # if self._robot.check_free(LEFT):
-                            #
-                            #     updated_cells = self._robot.move_robot(LEFT)
-                            #     yield LEFT, MOVE, updated_cells
-                            #
-                            #     is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
-                            #     yield is_complete
-                            #
-                            #     if is_complete:
-                            #         raise ExploreComplete
-                            #
-                            #     if self._robot.center == START:
-                            #         is_back_at_start = True
-                            #     yield is_back_at_start
-                            #     if is_back_at_start:
-                            #         break
-                            #     updated_cells = self._robot.get_sensor_readings()
-                            #     yield updated_cells
-                            #
-                            #     self._robot.turn_robot(BACKWARD)
-                            #     yield BACKWARD, TURN, {}
-                            #
-                            # else:
-                            #     self._robot.turn_robot(RIGHT)
-                            #     yield RIGHT, TURN, {}
-
+                        if self._robot.check_free(LEFT):
+                            updated_cells = self._robot.move_robot(LEFT)
+                            print('LEFT Free')
+                            yield LEFT, MOVE, updated_cells
+                        elif self._robot.check_free(FORWARD):
+                            print('Forward Free')
+                            updated_cells = self._robot.move_robot(FORWARD)
+                            yield FORWARD, MOVE, updated_cells
                         else:
                             self._robot.turn_robot(RIGHT)
                             yield RIGHT, TURN, {}
+                    else:
+                        print('Robot in efficiency limit.... ')
+                        if self._robot.check_free(FORWARD):
+                            print('Forward Free')
+                            updated_cells = self._robot.move_robot(FORWARD)
+                            yield FORWARD, MOVE, updated_cells
+                        elif self._robot.check_free(LEFT):
+                            updated_cells = self._robot.move_robot(LEFT)
+                            yield LEFT, MOVE, updated_cells
+
+                            is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
+                            yield is_complete
+
+                            if is_complete:
+                                raise ExploreComplete
+
+                            if self._robot.center == START:
+                                is_back_at_start = True
+                            yield is_back_at_start
+                            if is_back_at_start:
+                                break
+                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings()
+                            yield updated_cells
+
+                            self._robot.turn_robot(BACKWARD)
+                            yield BACKWARD, TURN, {}
+                        else:
+                            self._robot.turn_robot(RIGHT)
+                            yield RIGHT, TURN, {}
+
 
                     is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
                     yield is_complete
@@ -101,13 +124,16 @@ class Exploration:
                     if is_complete:
                         raise ExploreComplete
 
-                    if self._robot.center == START:
+                    if self._robot.center != START:
+                        is_leave_start = True
+
+                    if self._robot.center == START and is_leave_start and self._robot.get_completion_count() > 100:
                         is_back_at_start = True
 
                     yield is_back_at_start
 
-                if self._robot.get_completion_percentage() >= COMPLETION_THRESHOLD:
-                    return True
+                if self._robot.is_complete_after_back_to_start(self._exploration_limit, self._start_time, self._time_limit):
+                    raise ExploreComplete
 
                 while True:
                     try:
@@ -156,7 +182,7 @@ class Exploration:
                             raise PathNotFound
 
                         for move in moves:
-                            updated_cells = self._robot.get_sensor_readings()
+                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings()
                             if updated_cells:
                                 is_complete = self._robot.is_complete(self._exploration_limit, self._start_time,
                                                         self._time_limit)
@@ -165,8 +191,39 @@ class Exploration:
                                 if is_complete:
                                     raise ExploreComplete
                                 raise CellsUpdated
-                            self._robot.move_robot(move)
+
+                            if is_blind_range_undetected_obstacle:
+                                self._robot.turn_robot(RIGHT)
+                                print('-' * 50)
+                                print('Blind Range Undetected Obstacle Observed: Turn right to get sensor reading')
+                                yield "turned", RIGHT, False
+
+                                updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings()
+
+                                if updated_cells:
+                                    is_complete = self._robot.is_complete(self._exploration_limit, self._start_time,
+                                                            self._time_limit)
+                                    yield "updated", updated_cells, is_complete
+
+                                    if is_complete:
+                                        raise ExploreComplete
+                                    raise CellsUpdated
+
+                                print('Turn Left to get back to original track')
+                                self._robot.turn_robot(LEFT)
+                                yield "turned", LEFT, False
+
+                            updated_cells = self._robot.move_robot(move)
                             yield "moved", move, False
+
+                            if updated_cells:
+                                is_complete = self._robot.is_complete(self._exploration_limit, self._start_time,
+                                                        self._time_limit)
+                                yield "updated", updated_cells, is_complete
+
+                                if is_complete:
+                                    raise ExploreComplete
+                                raise CellsUpdated
 
                     except CellsUpdated:
                         continue
@@ -204,54 +261,79 @@ class Exploration:
         yield self._robot.mark_robot_standing()  # Mark initial robot space explored
 
         is_back_at_start = False
+        is_leave_start = False
         while True:
             try:
                 # Left-wall-hugging until loop
                 while not is_back_at_start:
-                    updated_cells = self._robot.get_sensor_readings(sender)
+                    updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(sender)
                     yield updated_cells
+
+                    if is_blind_range_undetected_obstacle:
+                        if self._robot.check_free(LEFT) or self._robot.check_free(FORWARD):
+                            self._robot.turn_robot(sender, RIGHT)
+                            print('Blind Range Undetected Obstacle Observed: Turn right to get sensor reading')
+                            yield RIGHT, TURN, {}
+
+                            is_complete = False
+                            yield is_complete
+
+                            is_back_at_start = False
+                            yield is_back_at_start
+
+                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(sender)
+                            yield updated_cells
+
+                            print('Turn Left to get back to original track')
+                            self._robot.turn_robot(sender, LEFT)
+                            yield LEFT, TURN, {}
+                            yield is_complete
+                            yield is_back_at_start
+
+                            updated_cells = {}
+                            yield updated_cells
 
                     in_efficiency_limit = self._robot.in_efficiency_limit()
 
-                    if not in_efficiency_limit and self._robot.check_free(LEFT):
-                        updated_cells = self._robot.move_robot(sender, LEFT)
-                        print('LEFT Free')
-                        yield LEFT, MOVE, updated_cells
-                    elif self._robot.check_free(FORWARD):
-                        print('Forward Free')
-                        updated_cells = self._robot.move_robot(sender, FORWARD)
-                        yield FORWARD, MOVE, updated_cells
-                    else:
-                        if in_efficiency_limit:
-                            print('Robot in efficiency limit.... ')
+                    if not in_efficiency_limit:
+
+                        if self._robot.check_free(LEFT):
+                            updated_cells = self._robot.move_robot(sender, LEFT)
+                            print('LEFT Free')
+                            yield LEFT, MOVE, updated_cells
+                        elif self._robot.check_free(FORWARD):
+                            print('Forward Free')
+                            updated_cells = self._robot.move_robot(sender, FORWARD)
+                            yield FORWARD, MOVE, updated_cells
+                        else:
                             self._robot.turn_robot(sender, RIGHT)
                             yield RIGHT, TURN, {}
+                    else:
+                        print('Robot in efficiency limit.... ')
+                        if self._robot.check_free(FORWARD):
+                            print('Forward Free')
+                            updated_cells = self._robot.move_robot(sender, FORWARD)
+                            yield FORWARD, MOVE, updated_cells
+                        elif self._robot.check_free(LEFT):
+                            updated_cells = self._robot.move_robot(sender, LEFT)
+                            yield LEFT, MOVE, updated_cells
 
-                            # if self._robot.check_free(LEFT):
-                            #     updated_cells = self._robot.move_robot(sender, LEFT)
-                            #     yield LEFT, MOVE, updated_cells
-                            #
-                            #     is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
-                            #     yield is_complete
-                            #
-                            #     if is_complete:
-                            #         raise ExploreComplete
-                            #
-                            #     if self._robot.center == START:
-                            #         is_back_at_start = True
-                            #     yield is_back_at_start
-                            #     if is_back_at_start:
-                            #         break
-                            #     updated_cells = self._robot.get_sensor_readings(sender)
-                            #     yield updated_cells
-                            #
-                            #     self._robot.turn_robot(sender, BACKWARD)
-                            #     yield BACKWARD, TURN, {}
-                            #
-                            # else:
-                            #     self._robot.turn_robot(sender, RIGHT)
-                            #     yield RIGHT, TURN, {}
+                            is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
+                            yield is_complete
 
+                            if is_complete:
+                                raise ExploreComplete
+
+                            if self._robot.center == START:
+                                is_back_at_start = True
+                            yield is_back_at_start
+                            if is_back_at_start:
+                                break
+                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(sender)
+                            yield updated_cells
+
+                            self._robot.turn_robot(sender, BACKWARD)
+                            yield BACKWARD, TURN, {}
                         else:
                             self._robot.turn_robot(sender, RIGHT)
                             yield RIGHT, TURN, {}
@@ -262,13 +344,16 @@ class Exploration:
                     if is_complete:
                         raise ExploreComplete
 
-                    if self._robot.center == START:
+                    if self._robot.center != START:
+                        is_leave_start = True
+
+                    if self._robot.center == START and is_leave_start and self._robot.get_completion_count() > 100:
                         is_back_at_start = True
 
                     yield is_back_at_start
 
-                if self._robot.get_completion_percentage() >= COMPLETION_THRESHOLD:
-                    return True
+                if self._robot.is_complete_after_back_to_start(self._exploration_limit, self._start_time, self._time_limit):
+                    raise ExploreComplete
 
                 # Finding shortest path to nearest unexplored square
                 while True:
@@ -318,7 +403,7 @@ class Exploration:
                             raise PathNotFound
 
                         for move in moves:
-                            updated_cells = self._robot.get_sensor_readings(sender)
+                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(sender)
                             if updated_cells:
                                 is_complete = self._robot.is_complete(self._exploration_limit, self._start_time,
                                                         self._time_limit)
@@ -327,45 +412,63 @@ class Exploration:
                                 if is_complete:
                                     raise ExploreComplete
                                 raise CellsUpdated
-                            self._robot.move_robot(sender, move)
+
+                            if is_blind_range_undetected_obstacle:
+                                self._robot.turn_robot(sender, RIGHT)
+                                print('-' * 50)
+                                print('Blind Range Undetected Obstacle Observed: Turn right to get sensor reading')
+                                yield "turned", RIGHT, False
+
+                                updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(sender)
+
+                                if updated_cells:
+                                    is_complete = self._robot.is_complete(self._exploration_limit, self._start_time,
+                                                            self._time_limit)
+                                    yield "updated", updated_cells, is_complete
+
+                                    if is_complete:
+                                        raise ExploreComplete
+                                    raise CellsUpdated
+
+                                print('Turn Left to get back to original track')
+                                self._robot.turn_robot(sender, LEFT)
+                                yield "turned", LEFT, False
+
+                            updated_cells = self._robot.move_robot(sender, move)
                             yield "moved", move, False
+
+                            if updated_cells:
+                                is_complete = self._robot.is_complete(self._exploration_limit, self._start_time,
+                                                        self._time_limit)
+                                yield "updated", updated_cells, is_complete
+
+                                if is_complete:
+                                    raise ExploreComplete
+                                raise CellsUpdated
+
                     except CellsUpdated:
                         continue
 
             except ExploreComplete:
                 break
-
             except PathNotFound:
                 yield "invalid", None, None
                 break
 
-        # Return to start after completion
-        while True:
-            center_y, center_x = get_matrix_coords(self._robot.center)
-            start_y, start_x = get_matrix_coords(START)
 
-            try:
-                moves = get_shortest_path_moves(self._robot,
-                                                (center_y, center_x), (start_y, start_x), is_give_up=True)
+        center_y, center_x = get_matrix_coords(self._robot.center)
+        start_y, start_x = get_matrix_coords(START)
 
-                if not moves:
-                    return True
+        moves = get_shortest_path_moves(self._robot,
+                                        (center_y, center_x), (start_y, start_x), is_give_up=True)
 
-                else:
-                    for move in moves:
-                        # In case of undetected blocks in the path home
-                        updated_cells = self._robot.get_sensor_readings(sender)
-                        if updated_cells:
-                            yield move
-                            raise CellsUpdated
-                        self._robot.move_robot(sender, move)
-                        yield move
+        if not moves:
+            return True
 
-            except IndexError:
-                break
-            except CellsUpdated:
-                continue
-
+        else:
+            for move in moves:
+                self._robot.move_robot(sender, move)
+                yield move
         return True
 
 
