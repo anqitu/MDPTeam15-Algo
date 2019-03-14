@@ -70,6 +70,8 @@ class Controller:
         self._sender.send_android("Hello from PC to Android\n")
         disable_print()
 
+        self.is_arrow_scan = IS_ARROW_SCAN
+
     def _receive_handler(self, msg):
         """
         Parse and handle messages from the Android device.
@@ -115,6 +117,10 @@ class Controller:
             self._sender.send_arduino(ARDUINO_TURN_RIGHT)
         elif msg == ANDROID_TURN_TO_BACKWARD:
             self._sender.send_arduino(ARDUINO_TURN_TO_BACKWARD)
+        elif msg == 'arrow_on':
+            self.is_arrow_scan = True
+        elif msg == 'arrow_off':
+            self.is_arrow_scan = False
 
     def _load_explore_map(self):
         if self._is_sim:
@@ -174,8 +180,7 @@ class Controller:
         msgs.append('"obstacleMap":"%s"'%self._robot.get_map_string())
         y, x = get_matrix_coords(self._robot.center)
         msgs.append('"robotPosition":"%s,%s,%s"' % (str(x), str(19 - y), str(self._robot.facing)))
-        if IS_ARROW_SCAN:
-            msgs.append('"arrowPosition":"{}"'.format(';'.join(self._robot.arrows_arduino)))
+        msgs.append('"arrowPosition":"{}"'.format(';'.join(self._robot.arrows_arduino)))
 
         self._sender.send_android('{' + ','.join(msgs) + '}')
 
@@ -185,7 +190,7 @@ class Controller:
         start_time = time()
         # if self._is_sim:
         #     self._robot.real_map = self._grid_map
-        exploration = Exploration(self._robot, start_time, self._explore_limit, self._time_limit)
+        exploration = Exploration(self._robot, start_time, self.is_arrow_scan, self._explore_limit, self._time_limit)
 
         if self._is_sim:
             run = exploration.start()
@@ -315,7 +320,7 @@ class Controller:
         else:
             if self._fastest_path[0] != FORWARD:
                 print('Turning Robot')
-                self._robot.turn_robot(self._sender, self._fastest_path[0])
+                self._robot.turn_robot(self._sender, self._fastest_path[0], self.is_arrow_scan)
                 print('Robot Turned')
 
         self._fastest_path[0] = FORWARD
