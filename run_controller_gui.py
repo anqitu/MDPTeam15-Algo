@@ -9,6 +9,9 @@ __author__ = 'MDPTeam15'
 
 if __name__ == '__main__':
 
+    if not IS_DEBUG_MODE:
+        disable_print()
+
     top = Tk()
 
     app = Window(top)
