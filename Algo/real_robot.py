@@ -257,7 +257,7 @@ class Robot:
         return self.get_completion_count() >= explore_limit \
             or float(time() - start_time >= time_limit)
 
-    def turn_robot(self, sender, direction):
+    def turn_robot(self, sender, direction, is_arrow_scan):
         """
         Turn the robot in a chosen direction.
 
@@ -278,10 +278,10 @@ class Robot:
         if self.is_calibrate_possible():
             self.calibrate(sender)
 
-        if IS_ARROW_SCAN and not self.is_fast_path:
+        if is_arrow_scan and not self.is_fast_path:
             self.check_arrow(sender)
 
-    def move_robot(self, sender, direction):
+    def move_robot(self, sender, direction, is_arrow_scan):
         """
         Move the robot 1 step in a chosen direction.
 
@@ -291,7 +291,7 @@ class Robot:
         :param direction: The direction to move (FORWARD, LEFT, RIGHT, BACKWARD)
         :return: Any cells that the robot has stepped on that it had not yet before.
         """
-        self.turn_robot(sender, direction)
+        self.turn_robot(sender, direction, is_arrow_scan)
 
         sender.send_arduino(get_arduino_cmd(FORWARD))
 
@@ -309,7 +309,7 @@ class Robot:
 
         sender.wait_arduino(ARDUIMO_MOVED)
 
-        if IS_ARROW_SCAN and not self.is_fast_path:
+        if is_arrow_scan and not self.is_fast_path:
             self.check_arrow(sender)
 
         return updated_cells
@@ -553,7 +553,7 @@ class Robot:
         else:
             print('Arrow Not Possible @ Robot Position: {}'.format((x, y, DIRECTIONS[self.facing])))
 
-    def get_sensor_readings(self, sender):
+    def get_sensor_readings(self, sender, is_arrow_scan):
         """
         Send a message to the Arduino to take sensor readings.
 
@@ -747,7 +747,7 @@ class Robot:
             self.calibrate(sender)
             self.is_calibration_time = False
 
-        if IS_ARROW_SCAN and not self.is_fast_path:
+        if is_arrow_scan and not self.is_fast_path:
             self.check_arrow(sender)
 
         return updated_cells, is_blind_range_undetected_obstacle

@@ -160,10 +160,8 @@ def print_map_info(robot):
     y, x = get_matrix_coords(robot.center)
     msgs.append('"robotPosition":"%s,%s,%s"' % (str(x), str(y), str(robot.facing)))
     msgs.append('"ARrobotPosition":"%s,%s,%s"' % (str(x), str(19 - y), str(robot.facing)))
-    if IS_ARROW_SCAN:
-        if robot.arrows_arduino:
-            msgs.append('"arrowPosition":"{}"'.format(','.join([str(value) for pos in robot.arrows for value in pos])))
-            msgs.append('"ARarrowPosition":"{}"'.format(';'.join(robot.arrows_arduino)))
+    msgs.append('"arrowPosition":"{}"'.format(','.join([str(value) for pos in robot.arrows for value in pos])))
+    msgs.append('"ARarrowPosition":"{}"'.format(';'.join(robot.arrows_arduino)))
     print('{' + ','.join(msgs) + '}')
 
     print('Exploration Status Map:')

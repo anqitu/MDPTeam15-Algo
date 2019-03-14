@@ -95,6 +95,8 @@ class Window(Frame):
         self._facing = self._robot.facing
         self._draw_robot(START, self._facing)
 
+        self.is_arrow_scan = IS_ARROW_SCAN
+
         disable_print()
 
     def _init_window(self):
@@ -172,6 +174,10 @@ class Window(Frame):
             self._sender.send_arduino(ARDUINO_TURN_RIGHT)
         elif msg == ANDROID_TURN_TO_BACKWARD:
             self._sender.send_arduino(ARDUINO_TURN_TO_BACKWARD)
+        elif msg == 'arrow_on':
+            self.is_arrow_scan = True
+        elif msg == 'arrow_off':
+            self.is_arrow_scan = False
 
     def _load_explore_map(self):
         if self._is_sim:
@@ -242,7 +248,7 @@ class Window(Frame):
         start_time = time()
         # if self._is_sim:
         #     self._robot.real_map = self._grid_map
-        exploration = Exploration(self._robot, start_time, self._explore_limit, self._time_limit)
+        exploration = Exploration(self._robot, start_time, self.is_arrow_scan, self._explore_limit, self._time_limit)
 
         if self._is_sim:
             run = exploration.start()
@@ -367,7 +373,7 @@ class Window(Frame):
 
         self._calibrate_after_exploration()
 
-        if IS_ARROW_SCAN:
+        if self.is_arrow_scan:
             if self._robot.arrows:
                 for y, x, facing in self._robot.arrows:
                     self._draw_arrow(get_grid_index(y, x), facing)
@@ -395,7 +401,7 @@ class Window(Frame):
         else:
             if self._fastest_path[0] != FORWARD:
                 print('Turning Robot')
-                self._robot.turn_robot(self._sender, self._fastest_path[0])
+                self._robot.turn_robot(self._sender, self._fastest_path[0], self.is_arrow_scan)
                 print('Robot Turned')
                 self._turn_head(self._facing, self._fastest_path[0])
 
@@ -675,7 +681,7 @@ class Window(Frame):
             else:
                 self.mark_cell(cell, OBSTACLE)
 
-        if IS_ARROW_SCAN:
+        if self.is_arrow_scan:
             for y, x, facing in self._robot.arrows:
                 self._draw_arrow(get_grid_index(y, x), facing)
 
