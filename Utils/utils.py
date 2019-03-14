@@ -30,6 +30,12 @@ def get_robot_cells(cell):
 
     return cells
 
+def is_at_border(y, x):
+    if y < 1 or y > 18 or x < 1 or x > 13:
+        return True
+    return False
+
+
 def previous_cell(cell, facing):
     """
     Calculate and return the xy coordinates of the previous cell the robot was standing on

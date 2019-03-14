@@ -27,8 +27,14 @@ def turning_cost(before_point, current_point, next_point):
         else:
             return 3
 
+
 def find_fastest_path(graph, start_point=(1, 1), goal_point=(18, 13), before_start_point=None):
     """Calculate the fastest path from a starting position to a goal position."""
+
+    # if goal point is at the border.
+    if is_at_border(goal_point[0], goal_point[1]):
+        return False
+
     bounded_start_point = (start_point[0] - 1, start_point[1] - 1)
     bounded_goal_point = (goal_point[0] - 1, goal_point[1] - 1)
     if before_start_point is None:
@@ -184,9 +190,6 @@ def get_shortest_valid_path(robot, start_cell, goal_cells):
     """
     Find the shortest path to any cell in the list of possible goal cells.
 
-    :author: Harold Lim Jie Yu (U1621635L)
-    :email: HARO0002@e.ntu.edu.sg
-
     :param robot: The robot currently in the maze
     :param start_cell: The start cell
     :param goal_cells: The list of possible goal cells.
@@ -194,6 +197,8 @@ def get_shortest_valid_path(robot, start_cell, goal_cells):
     """
     center_y, center_x = get_matrix_coords(start_cell)
     for target in goal_cells:
+        if is_at_border(center_y, center_x):
+            continue
         target_y, target_x = get_matrix_coords(target)
         moves = get_shortest_path_moves(robot, (center_y, center_x), (target_y, target_x))
         if moves:
