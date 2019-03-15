@@ -81,7 +81,7 @@ class Window(Frame):
             self._paint_map()
 
         self._explore_limit = COMPLETION_THRESHOLD
-        self._time_limit = 720
+        self._time_limit = TIME_LIMITE
 
         # Initialize connention client thread
         self._sender = Message_Handler(self._receive_handler)

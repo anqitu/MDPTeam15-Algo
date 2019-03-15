@@ -1,10 +1,11 @@
 """ This module defines all the constants that are used throughout the program. """
 
 """ Constants to play with (Start)"""
-IS_DEBUG_MODE = False # Whether enable console printout at the cost of a slower run
+IS_DEBUG_MODE = True # Whether enable console printout at the cost of a slower run
 IS_ARROW_SCAN = True # Whether scan for arrows during exploration
 CALIBRATION_STEPS = 1 # Number of steps per calibration
 COMPLETION_THRESHOLD = 300 # Target threshold
+TIME_LIMITE = 320
 FAST_PATH_STEP = 2 # Number of straight moves to send per time
 FAST_PATH_SLEEP_SEC = 0.2 # Duration of delay per instruction during fast path
 """ Constants to play with (End)"""
