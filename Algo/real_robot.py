@@ -324,12 +324,26 @@ class Robot:
         surround_status = self.robot_surround_status()
         print('Status of cells surrounding robot: {}'.format(surround_status))
         CODE_MAP = {0: 'L', 1: 'M', 2: 'T'}
+        is_north_calibrate = False
         for cell in [0,2,1]:
             if surround_status[NORTH][cell] == 1:
                 print('Calibrating Front {}'.format(CODE_MAP[cell]))
                 sender.send_arduino(CODE_MAP[cell])
                 sender.wait_arduino(ARDUIMO_MOVED)
+                is_north_calibrate = True
                 break
+        if not is_north_calibrate:
+            for cell in [0,2,1]:
+                if surround_status[SOUTH][cell] == 1:
+                    print('Turn Backward to Calibrate Front')
+                    self.turn_robot(sender, BACKWARD)
+                    print('Calibrating Side Front {}'.format(CODE_MAP[cell]))
+                    sender.send_arduino(CODE_MAP[cell])
+                    sender.wait_arduino(ARDUIMO_MOVED)
+                    print('Turn Backward after Calibrate Front')
+                    self.turn_robot(sender, BACKWARD)
+                    break
+
         for cell in [0,2,1]:
             if surround_status[WEST][cell] == 1:
                 print('Turn Left to Calibrate Front')

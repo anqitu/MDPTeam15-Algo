@@ -4399,7 +4399,7 @@ Arrow Not Possible @ Robot Position: (5, 13, 'NORTH')
 updated_cells (sensor_readings): {214: 0, 213: 0, 246: 0, 247: 0, 218: 0, 219: 0, 220: 0, 221: 0, 222: 0, 245: 1}
 RECEIVED PRi: ARQCV6: 0.09,71.05
 Data from Arduino: ['QCV6: 0.09,71.05']
-arduino_recv_queue: ['QCV1: 0.05,50.69\n', 'QCV2: 0.04,35.42\n', 'QCV3: 0.12,23.96', 'QCV4: 0.51,50.69', 'QCV5: 0.10,37.29', 'QCV6: 0.09,71.05']
+w
 SENDING AN{"exploreMap":"f8007000ff01fe03fc07d00fe01fe03fe07fc0ff80ffe0fe01fc03ff01c00380000000000003","obstacleMap":"00000000604000180c038001020008","robotPosition":"5,6,0","arrowPosition":"2,8,0;2,8,0"}
 
 Checking Free towards LEFT
