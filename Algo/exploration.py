@@ -21,10 +21,10 @@ class Exploration:
         """
         min_dist = NUM_ROWS * NUM_COLS + 1
         nearest = (-1, -1)
+        y, x = get_matrix_coords(self._robot.center)
         for i in range(NUM_ROWS):
             for j in range(NUM_COLS):
                 if self._robot.discovered_map[i][j] == 2:
-                    y, x = get_matrix_coords(self._robot.center)
                     dist = abs(y - i) + abs(x - j)
 
                     if dist < min_dist:
@@ -32,6 +32,16 @@ class Exploration:
                         nearest = (i, j)
 
         return nearest[0], nearest[1]
+
+    def _get_unexplored(self):
+        unexplored_coors = {}
+        y, x = get_matrix_coords(self._robot.center)
+        for i in range(NUM_ROWS):
+            for j in range(NUM_COLS):
+                if self._robot.discovered_map[i][j] == 2:
+                    unexplored_coors[(i, j)] = abs(y - i) + abs(x - j)
+        return sorted(unexplored_coors.items(), key=lambda kv: kv[1])
+
 
     def start(self):
         """
@@ -46,7 +56,7 @@ class Exploration:
         while True:
             try:
                 while not is_back_at_start:
-                    updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings()
+                    updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(self.is_arrow_scan)
                     yield updated_cells
 
                     if is_blind_range_undetected_obstacle:
@@ -61,7 +71,7 @@ class Exploration:
                             is_back_at_start = False
                             yield is_back_at_start
 
-                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings()
+                            updated_cells = self._robot.get_sensor_readings_blind_range()
                             yield updated_cells
 
                             print('Turn Left to get back to original track')
@@ -109,7 +119,7 @@ class Exploration:
                             yield is_back_at_start
                             if is_back_at_start:
                                 break
-                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings()
+                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(self.is_arrow_scan)
                             yield updated_cells
 
                             self._robot.turn_robot(BACKWARD)
@@ -138,52 +148,66 @@ class Exploration:
 
                 while True:
                     try:
-                        nearest_unexplored_y, nearest_unexplored_x = self._get_nearest_unexplored()
-                        center_y, center_x = get_matrix_coords(self._robot.center)
-                        print('nearest_unexplored_y, nearest_unexplored_x: {}'.format((nearest_unexplored_y, nearest_unexplored_x)))
+                        unexplored_coors = self._get_unexplored()
+                        for unexplored_coor in unexplored_coors:
+                            nearest_unexplored_y, nearest_unexplored_x = unexplored_coor[0]
+                            center_y, center_x = get_matrix_coords(self._robot.center)
+                            print('nearest_unexplored_y, nearest_unexplored_x: {}'.format((nearest_unexplored_y, nearest_unexplored_x)))
 
-                        print('Finding shortest path moves to nearest unexplored......')
-                        moves = get_shortest_path_moves(self._robot,
-                                                        (center_y, center_x),
-                                                        (nearest_unexplored_y, nearest_unexplored_x))
-                        print('Shortest path moaves to nearest unexplored: {}'.format(moves))
+                            print('Finding shortest path moves to nearest unexplored......')
+                            moves = get_shortest_path_moves(self._robot,
+                                                            (center_y, center_x),
+                                                            (nearest_unexplored_y, nearest_unexplored_x))
+                            print('Shortest path moaves to nearest unexplored: {}'.format(moves))
 
-                        if not moves:  # Check adjacent cells
-                            print('WARNING: Cannot find shortest path moves to nearest unexplored')
+                            if not moves:  # Check adjacent cells
+                                print('WARNING: Cannot find shortest path moves to nearest unexplored')
 
-                            print('Finding shortest valid path moves to adjacent cells......')
-                            robot_cell_index = get_grid_index(nearest_unexplored_y, nearest_unexplored_x)
-                            adjacent_cells = get_robot_cells(robot_cell_index)
-                            del adjacent_cells[4]
+                                print('Finding shortest valid path moves to adjacent cells......')
+                                robot_cell_index = get_grid_index(nearest_unexplored_y, nearest_unexplored_x)
+                                adjacent_cells = get_robot_cells(robot_cell_index)
+                                del adjacent_cells[4]
 
-                            adj_order = [5, 6, 7, 3, 4, 0, 1, 2]
-                            adjacent_cells = [adjacent_cells[i] for i in adj_order]
+                                adj_order = [5, 6, 7, 3, 4, 0, 1, 2]
+                                adjacent_cells = [adjacent_cells[i] for i in adj_order]
 
-                            moves = get_shortest_valid_path(self._robot,
-                                                            self._robot.center, adjacent_cells)
+                                moves = get_shortest_valid_path(self._robot,
+                                                                self._robot.center, adjacent_cells)
 
-                            # # Check adjacent cells of SW/SE/NW/NE cells
-                            # if not moves:
-                            #     print('WARNING: Cannot find shortest valid path moves to adjacent cells')
-                            #
-                            #     print('Finding shortest valid path moves to adjacent cells of SW/SE/NW/NE cells......')
-                            #     swsenwne_cells = [adjacent_cells[0], adjacent_cells[2], adjacent_cells[5],
-                            #                       adjacent_cells[7]]
-                            #
-                            #     for cell in swsenwne_cells:
-                            #         double_adjacent_cells = get_robot_cells(cell)
-                            #         double_adjacent_cells = [e for e in double_adjacent_cells if e not in adjacent_cells]
-                            #         moves = get_shortest_valid_path(self._robot,
-                            #                                         self._robot.center, double_adjacent_cells)
-                            #         if moves:
-                            #             break
+                            if moves:
+                                break
+
+                        # nearest_unexplored_y, nearest_unexplored_x = self._get_nearest_unexplored()
+                        # center_y, center_x = get_matrix_coords(self._robot.center)
+                        # print('nearest_unexplored_y, nearest_unexplored_x: {}'.format((nearest_unexplored_y, nearest_unexplored_x)))
+                        #
+                        # print('Finding shortest path moves to nearest unexplored......')
+                        # moves = get_shortest_path_moves(self._robot,
+                        #                                 (center_y, center_x),
+                        #                                 (nearest_unexplored_y, nearest_unexplored_x))
+                        # print('Shortest path moaves to nearest unexplored: {}'.format(moves))
+                        #
+                        # if not moves:  # Check adjacent cells
+                        #     print('WARNING: Cannot find shortest path moves to nearest unexplored')
+                        #
+                        #     print('Finding shortest valid path moves to adjacent cells......')
+                        #     robot_cell_index = get_grid_index(nearest_unexplored_y, nearest_unexplored_x)
+                        #     adjacent_cells = get_robot_cells(robot_cell_index)
+                        #     del adjacent_cells[4]
+                        #
+                        #     adj_order = [5, 6, 7, 3, 4, 0, 1, 2]
+                        #     adjacent_cells = [adjacent_cells[i] for i in adj_order]
+                        #
+                        #     moves = get_shortest_valid_path(self._robot,
+                        #                                     self._robot.center, adjacent_cells)
+
 
                         if not moves:
                             print('WARNING: Cannot find shortest path moves to unexplored')
                             raise PathNotFound
 
                         for move in moves:
-                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings()
+                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(self.is_arrow_scan)
                             if updated_cells:
                                 is_complete = self._robot.is_complete(self._exploration_limit, self._start_time,
                                                         self._time_limit)
@@ -199,7 +223,7 @@ class Exploration:
                                 print('Blind Range Undetected Obstacle Observed: Turn right to get sensor reading')
                                 yield "turned", RIGHT, False
 
-                                updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings()
+                                updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(self.is_arrow_scan)
 
                                 if updated_cells:
                                     is_complete = self._robot.is_complete(self._exploration_limit, self._start_time,
@@ -282,7 +306,7 @@ class Exploration:
                             is_back_at_start = False
                             yield is_back_at_start
 
-                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(sender, self.is_arrow_scan)
+                            updated_cells = self._robot.get_sensor_readings_blind_range(sender)
                             yield updated_cells
 
                             print('Turn Left to get back to original track')
@@ -359,45 +383,74 @@ class Exploration:
                 # Finding shortest path to nearest unexplored square
                 while True:
                     try:
-                        nearest_unexplored_y, nearest_unexplored_x = self._get_nearest_unexplored()
-                        center_y, center_x = get_matrix_coords(self._robot.center)
-                        print('nearest_unexplored_y, nearest_unexplored_x: {}'.format((nearest_unexplored_y, nearest_unexplored_x)))
+                        unexplored_coors = self._get_unexplored()
+                        for unexplored_coor in unexplored_coors:
+                            nearest_unexplored_y, nearest_unexplored_x = unexplored_coor[0]
+                            center_y, center_x = get_matrix_coords(self._robot.center)
+                            print('nearest_unexplored_y, nearest_unexplored_x: {}'.format((nearest_unexplored_y, nearest_unexplored_x)))
 
-                        print('Finding shortest path moves to nearest unexplored......')
-                        moves = get_shortest_path_moves(self._robot,
-                                                        (center_y, center_x),
-                                                        (nearest_unexplored_y, nearest_unexplored_x))
-                        print('Shortest path moves to nearest unexplored: {}'.format(moves))
+                            print('Finding shortest path moves to nearest unexplored......')
+                            moves = get_shortest_path_moves(self._robot,
+                                                            (center_y, center_x),
+                                                            (nearest_unexplored_y, nearest_unexplored_x))
+                            print('Shortest path moaves to nearest unexplored: {}'.format(moves))
 
-                        # # Check adjacent cells
-                        # if not moves:
-                        #     print('WARNING: Cannot find shortest path moves to nearest unexplored')
+                            if not moves:  # Check adjacent cells
+                                print('WARNING: Cannot find shortest path moves to nearest unexplored')
+
+                                print('Finding shortest valid path moves to adjacent cells......')
+                                robot_cell_index = get_grid_index(nearest_unexplored_y, nearest_unexplored_x)
+                                adjacent_cells = get_robot_cells(robot_cell_index)
+                                del adjacent_cells[4]
+
+                                adj_order = [5, 6, 7, 3, 4, 0, 1, 2]
+                                adjacent_cells = [adjacent_cells[i] for i in adj_order]
+
+                                moves = get_shortest_valid_path(self._robot,
+                                                                self._robot.center, adjacent_cells)
+
+                            if moves:
+                                break
+
+                        # nearest_unexplored_y, nearest_unexplored_x = self._get_nearest_unexplored()
+                        # center_y, center_x = get_matrix_coords(self._robot.center)
+                        # print('nearest_unexplored_y, nearest_unexplored_x: {}'.format((nearest_unexplored_y, nearest_unexplored_x)))
                         #
-                        #     print('Finding shortest valid path moves to adjacent cells......')
-                        #     adjacent_cells = get_robot_cells(get_grid_index(nearest_unexplored_y, nearest_unexplored_x))
-                        #     del adjacent_cells[4]
+                        # print('Finding shortest path moves to nearest unexplored......')
+                        # moves = get_shortest_path_moves(self._robot,
+                        #                                 (center_y, center_x),
+                        #                                 (nearest_unexplored_y, nearest_unexplored_x))
+                        # print('Shortest path moves to nearest unexplored: {}'.format(moves))
                         #
-                        #     adj_order = [5, 6, 7, 3, 4, 0, 1, 2]
-                        #     adjacent_cells = [adjacent_cells[i] for i in adj_order]
-                        #
-                        #     moves = get_shortest_valid_path(self._robot,
-                        #                                     self._robot.center, adjacent_cells)
-                        #
-                        #     # # Check adjacent cells of SW/SE/NW/NE cells
-                        #     # if not moves:
-                        #     #     print('WARNING: Cannot find shortest valid path moves to adjacent cells')
-                        #     #
-                        #     #     print('Finding shortest valid path moves to adjacent cells of SW/SE/NW/NE cells......')
-                        #     #     swsenwne_cells = [adjacent_cells[0], adjacent_cells[2], adjacent_cells[5],
-                        #     #                       adjacent_cells[7]]
-                        #     #
-                        #     #     for cell in swsenwne_cells:
-                        #     #         double_adjacent_cells = get_robot_cells(cell)
-                        #     #         double_adjacent_cells = [e for e in double_adjacent_cells if e not in adjacent_cells]
-                        #     #         moves = get_shortest_valid_path(self._robot,
-                        #     #                                         self._robot.center, double_adjacent_cells)
-                        #     #         if moves:
-                        #     #             break
+                        # # # Check adjacent cells
+                        # # if not moves:
+                        # #     print('WARNING: Cannot find shortest path moves to nearest unexplored')
+                        # #
+                        # #     print('Finding shortest valid path moves to adjacent cells......')
+                        # #     adjacent_cells = get_robot_cells(get_grid_index(nearest_unexplored_y, nearest_unexplored_x))
+                        # #     del adjacent_cells[4]
+                        # #
+                        # #     adj_order = [5, 6, 7, 3, 4, 0, 1, 2]
+                        # #     adjacent_cells = [adjacent_cells[i] for i in adj_order]
+                        # #
+                        # #     moves = get_shortest_valid_path(self._robot,
+                        # #                                     self._robot.center, adjacent_cells)
+                        # #
+                        # #     # # Check adjacent cells of SW/SE/NW/NE cells
+                        # #     # if not moves:
+                        # #     #     print('WARNING: Cannot find shortest valid path moves to adjacent cells')
+                        # #     #
+                        # #     #     print('Finding shortest valid path moves to adjacent cells of SW/SE/NW/NE cells......')
+                        # #     #     swsenwne_cells = [adjacent_cells[0], adjacent_cells[2], adjacent_cells[5],
+                        # #     #                       adjacent_cells[7]]
+                        # #     #
+                        # #     #     for cell in swsenwne_cells:
+                        # #     #         double_adjacent_cells = get_robot_cells(cell)
+                        # #     #         double_adjacent_cells = [e for e in double_adjacent_cells if e not in adjacent_cells]
+                        # #     #         moves = get_shortest_valid_path(self._robot,
+                        # #     #                                         self._robot.center, double_adjacent_cells)
+                        # #     #         if moves:
+                        # #     #             break
 
                         if not moves:
                             print('WARNING: Cannot find shortest path moves to unexplored')

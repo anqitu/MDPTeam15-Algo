@@ -3,14 +3,14 @@
 """ Constants to play with (Start)"""
 IS_DEBUG_MODE = True # Whether enable console printout at the cost of a slower run
 IS_ARROW_SCAN = True # Whether scan for arrows during exploration
-CALIBRATION_STEPS = 1 # Number of steps per calibration
+CALIBRATION_SIDE_STEPS = 10 # Number of steps per side calibration
+CALIBRATION_FRONT_STEPS = 10 # Number of steps per front calibration
 COMPLETION_THRESHOLD = 300 # Target threshold
-TIME_LIMITE = 320
-FAST_PATH_STEP = 2 # Number of straight moves to send per time
+TIME_LIMITE = 310
+FAST_PATH_STEP = 5 # Number of straight moves to send per time
 FAST_PATH_SLEEP_SEC = 0.2 # Duration of delay per instruction during fast path
 """ Constants to play with (End)"""
 
-IS_SIMULATE_MODE = False # Whether or not the current instance is going to be for a simulated or real run.
 IS_SLEEP = False
 SLEEP_SEC = 2
 

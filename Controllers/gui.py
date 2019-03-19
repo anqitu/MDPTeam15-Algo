@@ -105,6 +105,8 @@ class Window(Frame):
         self._facing = self._robot.facing
         self._draw_robot(START, self._facing)
 
+        self.is_arrow_scan = IS_ARROW_SCAN
+
     def _explore(self):
         """Start the exploration."""
         start_time = time()
@@ -114,7 +116,7 @@ class Window(Frame):
         timestep = float(self._timestep_entry.get().strip())
 
         self._robot.real_map = self._grid_map
-        exploration = Exploration(self._robot, start_time, explore_limit, time_limit)
+        exploration = Exploration(self._robot, start_time, self.is_arrow_scan, explore_limit, time_limit)
 
         run = exploration.start()
 

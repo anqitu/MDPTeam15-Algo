@@ -29,7 +29,8 @@ class Robot:
         self.arrows_arduino = []
         self.arrows_results = []
         self.move_counts = 1
-        self.is_calibration_time = False
+        self.is_calibration_side_time = False
+        self.is_calibration_front_time = False
         self.sensors = [
             #   2 3 4
             # 1       5
@@ -257,7 +258,7 @@ class Robot:
         return self.get_completion_count() >= explore_limit \
             or float(time() - start_time >= time_limit)
 
-    def turn_robot(self, sender, direction, is_arrow_scan):
+    def turn_robot(self, sender, direction, is_arrow_scan = False):
         """
         Turn the robot in a chosen direction.
 
@@ -275,13 +276,13 @@ class Robot:
 
         sender.wait_arduino(ARDUIMO_MOVED)
 
-        if self.is_calibrate_possible():
-            self.calibrate(sender)
+        if self.is_calibrate_side_possible():
+            self.calibrate_side(sender)
 
         if is_arrow_scan and not self.is_fast_path:
             self.check_arrow(sender)
 
-    def move_robot(self, sender, direction, is_arrow_scan):
+    def move_robot(self, sender, direction, is_arrow_scan = False):
         """
         Move the robot 1 step in a chosen direction.
 
@@ -314,11 +315,42 @@ class Robot:
 
         return updated_cells
 
-    def calibrate(self, sender):
-        print('Calibrating')
+    def calibrate_side(self, sender):
+        print('Calibrating Side')
         sender.send_arduino('C')
-        sender.wait_arduino('C')
+        sender.wait_arduino(ARDUIMO_MOVED)
 
+    def calibrate_front(self, sender):
+        surround_status = self.robot_surround_status()
+        print('Status of cells surrounding robot: {}'.format(surround_status))
+        CODE_MAP = {0: 'L', 1: 'M', 2: 'T'}
+        for cell in [0,2,1]:
+            if surround_status[NORTH][cell] == 1:
+                print('Calibrating Front {}'.format(CODE_MAP[cell]))
+                sender.send_arduino(CODE_MAP[cell])
+                sender.wait_arduino(ARDUIMO_MOVED)
+                break
+        for cell in [0,2,1]:
+            if surround_status[WEST][cell] == 1:
+                print('Turn Left to Calibrate Front')
+                self.turn_robot(sender, LEFT)
+                print('Calibrating Side Front {}'.format(CODE_MAP[cell]))
+                sender.send_arduino(CODE_MAP[cell])
+                sender.wait_arduino(ARDUIMO_MOVED)
+                print('Turn Right after Calibrate Front')
+                self.turn_robot(sender, RIGHT)
+                return True
+        for cell in [0,2,1]:
+            if surround_status[EAST][cell] == 1:
+                print('Turn Right to Calibrate Front')
+                self.turn_robot(sender, RIGHT)
+                print('Calibrating Side Front {}'.format(CODE_MAP[cell]))
+                sender.send_arduino(CODE_MAP[cell])
+                sender.wait_arduino(ARDUIMO_MOVED)
+                print('Turn Left after Calibrate Front')
+                self.turn_robot(sender, LEFT)
+                return True
+        return False
 
     def move_robot_algo(self, direction):
         """
@@ -397,7 +429,44 @@ class Robot:
             print('ie')
             return False
 
-    def is_calibrate_possible(self):
+    def robot_surround_status(self):
+        print('Getting cell status surrounding robot...')
+
+        y, x = get_matrix_coords(self.center)
+        discovered_map = self.discovered_map
+        facing = self.facing
+
+        print('Robot Position @ {}'.format((x, y, facing)))
+        surround_status = {NORTH:[], EAST:[], SOUTH:[], WEST:[]}
+
+        for i in [x-1, x, x+1]:
+            if (y + 2) > 19:
+                surround_status[NORTH].append(1)
+            else:
+                surround_status[NORTH].append(discovered_map[y + 2][i])
+
+        for i in [y+1, y, y-1]:
+            if (x + 2) > 14:
+                surround_status[EAST].append(1)
+            else:
+                surround_status[EAST].append(discovered_map[i][x + 2])
+
+        for i in [x+1, x, x-1]:
+            if (y - 2) < 0:
+                surround_status[SOUTH].append(1)
+            else:
+                surround_status[SOUTH].append(discovered_map[y - 2][i])
+
+        for i in [y-1, y, y+1]:
+            if (x - 2) < 0:
+                surround_status[WEST].append(1)
+            else:
+                surround_status[WEST].append(discovered_map[i][x - 2])
+
+        return {(direction - facing) % 4: value for direction, value in surround_status.items()}
+
+
+    def is_calibrate_side_possible(self):
         print('Checking Whether Calibration Possible...')
 
         y, x = get_matrix_coords(self.center)
@@ -553,7 +622,7 @@ class Robot:
         else:
             print('Arrow Not Possible @ Robot Position: {}'.format((x, y, DIRECTIONS[self.facing])))
 
-    def get_sensor_readings(self, sender, is_arrow_scan):
+    def get_sensor_readings(self, sender, is_arrow_scan = False):
         """
         Send a message to the Arduino to take sensor readings.
 
@@ -740,17 +809,190 @@ class Robot:
 
         print('-' * 50)
         print('Total move counts: {}'.format(self.move_counts))
-        if self.move_counts % CALIBRATION_STEPS == 0:
-            self.is_calibration_time = True
+        if self.move_counts % CALIBRATION_SIDE_STEPS == 0:
+            self.is_calibration_side_time = True
             print('Time to Calibrate')
-        if self.is_calibration_time and self.is_calibrate_possible():
-            self.calibrate(sender)
-            self.is_calibration_time = False
+        if self.is_calibration_side_time and self.is_calibrate_side_possible():
+            self.calibrate_side(sender)
+            self.is_calibration_side_time = False
+
+        if self.move_counts % CALIBRATION_FRONT_STEPS == 0:
+            self.is_calibration_front_time = True
+            print('Time to Calibrate')
+        if self.is_calibration_front_time:
+            self.is_calibration_front_time = not self.calibrate_front(sender)
 
         if is_arrow_scan and not self.is_fast_path:
             self.check_arrow(sender)
 
         return updated_cells, is_blind_range_undetected_obstacle
+
+    def get_sensor_readings_blind_range(self, sender):
+
+        sender.send_arduino(ARDUINO_SENSOR)
+        readings = sender.wait_arduino(self._readings_regex_arduino, is_regex=True)
+        readings = readings.split(',')
+        del readings[-1]
+
+        readings = [int(x) for x in readings]
+
+        robot_cells = get_robot_cells(self.center)
+        sensors = self.sensors[:]
+        sensor_index = sensors.index
+        updated_cells = {}
+        is_blind_range_undetected_obstacle = False
+
+        for sensor in sensors:
+            true_facing = (sensor["facing"] + self.facing) % 4
+
+            if sensor["mount_loc"] != CS:
+                offset = self.facing * 2
+                true_mounting = (sensor["mount_loc"] + offset) % 8
+            else:
+                true_mounting = CS
+
+            if true_mounting == NWS:
+                origin = robot_cells[0]
+            elif true_mounting == NS:
+                origin = robot_cells[1]
+            elif true_mounting == NES:
+                origin = robot_cells[2]
+            elif true_mounting == WS:
+                origin = robot_cells[3]
+            elif true_mounting == ES:
+                origin = robot_cells[5]
+            elif true_mounting == SWS:
+                origin = robot_cells[6]
+            elif true_mounting == SS:
+                origin = robot_cells[7]
+            elif true_mounting == SES:
+                origin = robot_cells[8]
+            elif true_mounting == CS:
+                origin = robot_cells[4]
+
+            y, x = get_matrix_coords(origin)
+            cover_range = range(1, sensor["range"] + 1)
+            read_range = range(sensor["blind_spot"] + 1, sensor["range"] + 1)
+            blind_range = range(1, sensor["blind_spot"] + 1)
+
+            reading = readings[sensor_index(sensor)]
+            print('Sensor', sensor_index(sensor))
+
+            weight = 4
+
+            # If reading is 0, means no obstacle in the covered range
+            if reading == 0:
+                print('No Obstacle in Covered Range')
+                for cell in cover_range:
+                    try:
+                        if true_facing == NORTH:
+                            to_explore = (y + cell, x)
+                        elif true_facing == EAST:
+                            to_explore = (y, x + cell)
+                        elif true_facing == SOUTH:
+                            to_explore = (y - cell, x)
+                        elif true_facing == WEST:
+                            to_explore = (y, x - cell)
+
+                        if to_explore[0] < 0 or to_explore[0] > 19 or to_explore[1] < 0 or to_explore[1] > 14:
+                            print('ie')
+                            raise IndexError
+
+                        cell_index = get_grid_index(to_explore[0], to_explore[1])
+
+                        updated_cell, value = self._mark_probability(cell_index, 0 * weight, 1 * weight)
+                        if updated_cell is not None:
+                            updated_cells[updated_cell] = value
+
+                        weight = max(weight/2, 1)
+
+                    except IndexError:
+                        break
+                print('br')
+
+            # if reading in the read range, mark cells as 0 until the obstacle cell
+            elif reading in read_range:
+                print('Has Obstacle in Covered Range')
+
+                # If the robot is able to observe onstacle in covered range, there is no obstacle in the blind spot.
+                for cell in blind_range:
+                    try:
+                        if true_facing == NORTH:
+                            to_explore = (y + cell, x)
+                        elif true_facing == EAST:
+                            to_explore = (y, x + cell)
+                        elif true_facing == SOUTH:
+                            to_explore = (y - cell, x)
+                        elif true_facing == WEST:
+                            to_explore = (y, x - cell)
+
+                        if to_explore[0] < 0 or to_explore[0] > 19 or to_explore[1] < 0 or to_explore[1] > 14:
+                            print('ie')
+                            raise IndexError
+
+                        cell_index = get_grid_index(to_explore[0], to_explore[1])
+                        updated_cell, value = self._mark_probability(cell_index, 0, 1 * weight)
+                        if updated_cell is not None:
+                            updated_cells[updated_cell] = value
+                    except IndexError:
+                        break
+                print('br')
+
+                # Check for cells in read range
+                for cell in read_range:
+                    try:
+                        if true_facing == NORTH:
+                            to_explore = (y + cell, x)
+                        elif true_facing == EAST:
+                            to_explore = (y, x + cell)
+                        elif true_facing == SOUTH:
+                            to_explore = (y - cell, x)
+                        elif true_facing == WEST:
+                            to_explore = (y, x - cell)
+
+                        if to_explore[0] < 0 or to_explore[0] > 19 or to_explore[1] < 0 or to_explore[1] > 14:
+                            print('ie')
+                            raise IndexError
+
+                        cell_index = get_grid_index(to_explore[0], to_explore[1])
+
+                        updated_cell, value = self._mark_probability(cell_index, int(reading == cell) * weight, 1 * weight)
+                        if updated_cell is not None:
+                            updated_cells[updated_cell] = value
+
+                        # If the current cell is the one with obstacle, break the loop
+                        if self.discovered_map[to_explore[0]][to_explore[1]] == 1:
+                            raise IndexError
+
+                        weight /= 2
+
+                    except IndexError:
+                        break
+                print('br')
+            else:
+                print('Unacceptable Reading')
+
+            if sensor_index(sensor) == 2:
+                if reading not in [1,2]:
+                    cell = 3
+                    if true_facing == NORTH:
+                        to_explore = (y + cell, x)
+                    elif true_facing == EAST:
+                        to_explore = (y, x + cell)
+                    elif true_facing == SOUTH:
+                        to_explore = (y - cell, x)
+                    elif true_facing == WEST:
+                        to_explore = (y, x - cell)
+
+                    if to_explore[0] < 0 or to_explore[0] > 19 or to_explore[1] < 0 or to_explore[1] > 14:
+                        print('ie')
+                    else:
+                        cell_index = get_grid_index(to_explore[0], to_explore[1])
+                        updated_cell, value = self._mark_probability(cell_index, 1, 1 * 2)
+                        if updated_cell is not None:
+                            updated_cells[updated_cell] = value
+
+        return updated_cells
 
     def get_explore_string(self):
         """ Build and return the MDF string of the exploration status at the time of calling this function. """

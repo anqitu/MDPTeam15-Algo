@@ -24,38 +24,13 @@ class Controller:
         """
         Initialize the Controller class.
         """
-
         self._filename = ''
 
-        self._is_sim = IS_SIMULATE_MODE
-
-        if self._is_sim:
-            print('Simulation run')
-            print('Loading Map......')
-
-            import tkinter as tk
-            root = tk.Tk()
-            root.withdraw()
-            while not self._load_map():
-                while True:
-                    ans = input("Try again? (y/n) ").strip()
-                    if ans.lower() == 'y':
-                        break
-                    elif ans.lower() == 'n':
-                        exit()
-
-            self._timestep = float(input("Timestep: ").strip())
-            from Algo.sim_robot import Robot
-            self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
-                                facing=NORTH,
-                                discovered_map=[[2] * ROW_LENGTH for _ in range(COL_LENGTH)],
-                                real_map=[[]])
-        else:
-            print('Real run')
-            from Algo.real_robot import Robot
-            self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
-                                facing=NORTH,
-                                discovered_map=[[2] * ROW_LENGTH for _ in range(COL_LENGTH)])
+        print('Real run')
+        from Algo.real_robot import Robot
+        self._robot = Robot(exploration_status=[[0] * ROW_LENGTH for _ in range(COL_LENGTH)],
+                            facing=NORTH,
+                            discovered_map=[[2] * ROW_LENGTH for _ in range(COL_LENGTH)])
 
         self._explore_limit = COMPLETION_THRESHOLD
         self._time_limit = TIME_LIMITE
@@ -123,17 +98,11 @@ class Controller:
             self.is_arrow_scan = False
 
     def _load_explore_map(self):
-        if self._is_sim:
-            from Algo.sim_robot import Robot
-            self._robot = Robot(exploration_status=EXPLORE_STATUS_MAP,
-                                facing=NORTH,
-                                discovered_map=EXPLORATION_OBSTACLE_MAP,
-                                real_map=[[]])
-        else:
-            from Algo.real_robot import Robot
-            self._robot = Robot(exploration_status=EXPLORE_STATUS_MAP,
-                                facing=NORTH,
-                                discovered_map=EXPLORATION_OBSTACLE_MAP)
+
+        from Algo.real_robot import Robot
+        self._robot = Robot(exploration_status=EXPLORE_STATUS_MAP,
+                            facing=NORTH,
+                            discovered_map=EXPLORATION_OBSTACLE_MAP)
 
         cells = [item for sublist in EXPLORATION_OBSTACLE_MAP for item in sublist]
         updated_cells = {i+1: cells[i] for i in range(len(cells))}
@@ -161,12 +130,12 @@ class Controller:
 
         :return: N/A
         """
-        self._robot.calibrate(self._sender)
+        self._robot.calibrate_side(self._sender)
+        self._robot.calibrate_front(self._sender)
 
-        # if self._is_sim:
-        #     self._robot.calibrate()
-        # else:
-        #     self._robot.calibrate(self._sender)
+        enable_print()
+        print('Calibrating Done!')
+        disable_print()
 
     def _update_android(self):
         """
@@ -188,14 +157,9 @@ class Controller:
         """Start the exploration."""
 
         start_time = time()
-        # if self._is_sim:
-        #     self._robot.real_map = self._grid_map
         exploration = Exploration(self._robot, start_time, self.is_arrow_scan, self._explore_limit, self._time_limit)
 
-        if self._is_sim:
-            run = exploration.start()
-        else:
-            run = exploration.start_real(self._sender)
+        run = exploration.start_real(self._sender)
 
         initial_pos = next(run)
         self._update_android()
@@ -215,11 +179,6 @@ class Controller:
 
                     direction, move_or_turn, updated_cells = run.send(0)
                     print('direction, move_or_turn, updated_cells (robot standing): {}'.format((MOVEMENTS[direction], MOVE_TURN[move_or_turn], updated_cells)))
-
-                    # if self._is_sim:
-                    #     sleep(self._timestep)
-                    # if IS_SLEEP:
-                    #     sleep(SLEEP_SEC)
 
                     self._update_android()
                     print_map_info(self._robot)
@@ -245,10 +204,6 @@ class Controller:
                         while True:
                             print('=' * 100)
                             updated_or_moved_or_turned, value, is_complete = run.send(0)
-                            # if self._is_sim:
-                            #     sleep(self._timestep)
-                            # if IS_SLEEP:
-                            #     sleep(SLEEP_SEC)
 
                             print('-' * 50)
                             if updated_or_moved_or_turned == "updated":
@@ -281,11 +236,6 @@ class Controller:
                 disable_print()
                 while True:
                     direction = run.send(0)
-                    # if self._is_sim:
-                    #     sleep(self._timestep)
-                    # if IS_SLEEP:
-                    #     sleep(SLEEP_SEC)
-
                     self._update_android()
 
             except StopIteration:
@@ -314,14 +264,10 @@ class Controller:
         disable_print()
         self._fastest_path = self._find_fastest_path()
 
-        if self._is_sim:
-            sleep(self._timestep)
-            self._robot.turn_robot(self._fastest_path[0])
-        else:
-            if self._fastest_path[0] != FORWARD:
-                print('Turning Robot')
-                self._robot.turn_robot(self._sender, self._fastest_path[0], self.is_arrow_scan)
-                print('Robot Turned')
+        if self._fastest_path[0] != FORWARD:
+            print('Turning Robot')
+            self._robot.turn_robot(self._sender, self._fastest_path[0], self.is_arrow_scan)
+            print('Robot Turned')
 
         self._fastest_path[0] = FORWARD
         self._update_android()
@@ -359,27 +305,17 @@ class Controller:
         """Move the robot along the fastest path."""
         if self._fastest_path:
             self._robot.is_fast_path = True
-            if self._is_sim:
-                move_strs = get_fastest_path_moves(self._fastest_path)
-                for move_str in move_strs:
-                    self._sender.send_arduino(move_str)
 
-                    for cmd in move_str:
-                        sleep(self._timestep)
-                        self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
-                        self._update_android()
+            move_strs = get_fastest_path_moves(self._fastest_path)
+            for move_str in move_strs:
+                sleep(FAST_PATH_SLEEP_SEC)
+                self._sender.send_arduino(move_str)
 
-            else:
-                move_strs = get_fastest_path_moves(self._fastest_path)
-                for move_str in move_strs:
-                    sleep(FAST_PATH_SLEEP_SEC)
-                    self._sender.send_arduino(move_str)
+                for cmd in move_str:
+                    self._sender.wait_arduino(ARDUIMO_MOVED)
 
-                    for cmd in move_str:
-                        self._sender.wait_arduino(ARDUIMO_MOVED)
-
-                        self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
-                        self._update_android()
+                    self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
+                    self._update_android()
 
             enable_print()
             print('Reached GOAL!')
