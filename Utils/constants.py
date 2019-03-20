@@ -7,7 +7,7 @@ CALIBRATION_SIDE_STEPS = 7 # Number of steps per side calibration
 CALIBRATION_FRONT_STEPS = 7 # Number of steps per front calibration
 COMPLETION_THRESHOLD = 300 # Target threshold
 TIME_LIMITE = 310
-FAST_PATH_STEP = 5 # Number of straight moves to send per time
+FAST_PATH_STEP = 1 # Number of straight moves to send per time
 FAST_PATH_SLEEP_SEC = 0.2 # Duration of delay per instruction during fast path
 """ Constants to play with (End)"""
 
