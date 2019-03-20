@@ -96,6 +96,8 @@ class Controller:
             self.is_arrow_scan = True
         elif msg == 'arrow_off':
             self.is_arrow_scan = False
+        elif msg == 'S':
+            self._sender.send_arduino(ARDUINO_SENSOR)
 
     def _load_explore_map(self):
 
@@ -108,7 +110,12 @@ class Controller:
         updated_cells = {i+1: cells[i] for i in range(len(cells))}
         self._update_android()
 
+        self._calibrate()
+        sleep(1)
+
         self._calibrate_after_exploration()
+        sleep(1)
+
 
 
     def _set_way_point(self, coordinate):
@@ -246,7 +253,12 @@ class Controller:
         print('Exploration Done')
         disable_print()
 
+        self._calibrate()
+        sleep(1)
+
         self._calibrate_after_exploration()
+        sleep(1)
+
 
         self._update_android()
         enable_print()

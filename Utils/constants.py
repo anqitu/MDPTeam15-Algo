@@ -3,8 +3,8 @@
 """ Constants to play with (Start)"""
 IS_DEBUG_MODE = True # Whether enable console printout at the cost of a slower run
 IS_ARROW_SCAN = True # Whether scan for arrows during exploration
-CALIBRATION_SIDE_STEPS = 10 # Number of steps per side calibration
-CALIBRATION_FRONT_STEPS = 10 # Number of steps per front calibration
+CALIBRATION_SIDE_STEPS = 7 # Number of steps per side calibration
+CALIBRATION_FRONT_STEPS = 7 # Number of steps per front calibration
 COMPLETION_THRESHOLD = 300 # Target threshold
 TIME_LIMITE = 310
 FAST_PATH_STEP = 5 # Number of straight moves to send per time

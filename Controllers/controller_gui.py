@@ -152,6 +152,8 @@ class Window(Frame):
             self.is_arrow_scan = True
         elif msg == 'arrow_off':
             self.is_arrow_scan = False
+        elif msg == 'S':
+            self._sender.send_arduino(ARDUINO_SENSOR)
 
     def _load_explore_map(self):
         from Algo.real_robot import Robot
@@ -169,8 +171,6 @@ class Window(Frame):
 
         self._calibrate_after_exploration()
         sleep(1)
-
-        # self._calibrate()
 
     def _set_way_point(self, coordinate):
         """
@@ -330,8 +330,6 @@ class Window(Frame):
 
         self._calibrate_after_exploration()
         sleep(1)
-
-        # self._calibrate()
 
         if self.is_arrow_scan:
             if self._robot.arrows:

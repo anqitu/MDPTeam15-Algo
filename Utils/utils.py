@@ -167,18 +167,19 @@ def print_map_info(robot):
     print('Exploration Status Map:')
     for _ in robot.exploration_status[::-1]:
         print(_)
+
     print('Discovered Map:')
     for _ in robot.discovered_map[::-1]:
         print(_)
 
-    if IS_ARROW_SCAN:
-        print('Arrow Taken Status Map:')
-        for _ in robot.arrow_taken_status[::-1]:
-            print(_)
+    # if IS_ARROW_SCAN:
+    #     print('Arrow Taken Status Map:')
+    #     for _ in robot.arrow_taken_status[::-1]:
+    #         print(_)
 
-    if robot.real_map:
-        print('Real Map:')
-        for _ in robot.real_map:
-            print(_)
+    # if robot.real_map:
+    #     print('Real Map:')
+    #     for _ in robot.real_map:
+    #         print(_)
 
     print()
