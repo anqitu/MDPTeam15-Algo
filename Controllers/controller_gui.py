@@ -399,7 +399,7 @@ class Window(Frame):
 
             for move_str in move_strs:
                 for cmd in move_str:
-                    sleep(1)
+                    sleep(0.7)
 
                     self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
                     if convert_arduino_cmd_to_direction(cmd) == FORWARD:
