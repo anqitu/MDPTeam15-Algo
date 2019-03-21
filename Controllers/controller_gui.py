@@ -395,12 +395,11 @@ class Window(Frame):
         if self._fastest_path:
             self._robot.is_fast_path = True
             move_strs = get_fastest_path_moves(self._fastest_path)
-            for move_str in move_strs:
-                sleep(FAST_PATH_SLEEP_SEC)
-                self._sender.send_arduino(move_str)
+            self._sender.send_arduino(''.join(move_strs))
 
+            for move_str in move_strs:
                 for cmd in move_str:
-                    self._sender.wait_arduino(ARDUIMO_MOVED)
+                    sleep(1)
 
                     self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
                     if convert_arduino_cmd_to_direction(cmd) == FORWARD:
