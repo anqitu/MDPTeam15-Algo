@@ -259,7 +259,6 @@ class Controller:
         self._calibrate_after_exploration()
         sleep(1)
 
-
         self._update_android()
         enable_print()
         print_map_info(self._robot)
@@ -317,14 +316,12 @@ class Controller:
         """Move the robot along the fastest path."""
         if self._fastest_path:
             self._robot.is_fast_path = True
-
             move_strs = get_fastest_path_moves(self._fastest_path)
-            for move_str in move_strs:
-                sleep(FAST_PATH_SLEEP_SEC)
-                self._sender.send_arduino(move_str)
+            self._sender.send_arduino(''.join(move_strs))
 
+            for move_str in move_strs:
                 for cmd in move_str:
-                    self._sender.wait_arduino(ARDUIMO_MOVED)
+                    sleep(0.7)
 
                     self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
                     self._update_android()

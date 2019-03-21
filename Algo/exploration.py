@@ -177,31 +177,6 @@ class Exploration:
                             if moves:
                                 break
 
-                        # nearest_unexplored_y, nearest_unexplored_x = self._get_nearest_unexplored()
-                        # center_y, center_x = get_matrix_coords(self._robot.center)
-                        # print('nearest_unexplored_y, nearest_unexplored_x: {}'.format((nearest_unexplored_y, nearest_unexplored_x)))
-                        #
-                        # print('Finding shortest path moves to nearest unexplored......')
-                        # moves = get_shortest_path_moves(self._robot,
-                        #                                 (center_y, center_x),
-                        #                                 (nearest_unexplored_y, nearest_unexplored_x))
-                        # print('Shortest path moaves to nearest unexplored: {}'.format(moves))
-                        #
-                        # if not moves:  # Check adjacent cells
-                        #     print('WARNING: Cannot find shortest path moves to nearest unexplored')
-                        #
-                        #     print('Finding shortest valid path moves to adjacent cells......')
-                        #     robot_cell_index = get_grid_index(nearest_unexplored_y, nearest_unexplored_x)
-                        #     adjacent_cells = get_robot_cells(robot_cell_index)
-                        #     del adjacent_cells[4]
-                        #
-                        #     adj_order = [5, 6, 7, 3, 4, 0, 1, 2]
-                        #     adjacent_cells = [adjacent_cells[i] for i in adj_order]
-                        #
-                        #     moves = get_shortest_valid_path(self._robot,
-                        #                                     self._robot.center, adjacent_cells)
-
-
                         if not moves:
                             print('WARNING: Cannot find shortest path moves to unexplored')
                             raise PathNotFound
@@ -318,50 +293,17 @@ class Exploration:
                             updated_cells = {}
                             yield updated_cells
 
-                    in_efficiency_limit = self._robot.in_efficiency_limit()
-
-                    if not in_efficiency_limit:
-
-                        if self._robot.check_free(LEFT):
-                            updated_cells = self._robot.move_robot(sender, LEFT, self.is_arrow_scan)
-                            print('LEFT Free')
-                            yield LEFT, MOVE, updated_cells
-                        elif self._robot.check_free(FORWARD):
-                            print('Forward Free')
-                            updated_cells = self._robot.move_robot(sender, FORWARD, self.is_arrow_scan)
-                            yield FORWARD, MOVE, updated_cells
-                        else:
-                            self._robot.turn_robot(sender, RIGHT, self.is_arrow_scan)
-                            yield RIGHT, TURN, {}
+                    if self._robot.check_free(LEFT):
+                        updated_cells = self._robot.move_robot(sender, LEFT, self.is_arrow_scan)
+                        print('LEFT Free')
+                        yield LEFT, MOVE, updated_cells
+                    elif self._robot.check_free(FORWARD):
+                        print('Forward Free')
+                        updated_cells = self._robot.move_robot(sender, FORWARD, self.is_arrow_scan)
+                        yield FORWARD, MOVE, updated_cells
                     else:
-                        print('Robot in efficiency limit.... ')
-                        if self._robot.check_free(FORWARD):
-                            print('Forward Free')
-                            updated_cells = self._robot.move_robot(sender, FORWARD, self.is_arrow_scan)
-                            yield FORWARD, MOVE, updated_cells
-                        elif self._robot.check_free(LEFT):
-                            updated_cells = self._robot.move_robot(sender, LEFT, self.is_arrow_scan)
-                            yield LEFT, MOVE, updated_cells
-
-                            is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
-                            yield is_complete
-
-                            if is_complete:
-                                raise ExploreComplete
-
-                            if self._robot.center == START:
-                                is_back_at_start = True
-                            yield is_back_at_start
-                            if is_back_at_start:
-                                break
-                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(sender, self.is_arrow_scan)
-                            yield updated_cells
-
-                            self._robot.turn_robot(sender, BACKWARD, self.is_arrow_scan)
-                            yield BACKWARD, TURN, {}
-                        else:
-                            self._robot.turn_robot(sender, RIGHT, self.is_arrow_scan)
-                            yield RIGHT, TURN, {}
+                        self._robot.turn_robot(sender, RIGHT, self.is_arrow_scan)
+                        yield RIGHT, TURN, {}
 
                     is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
                     yield is_complete
