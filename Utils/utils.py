@@ -105,6 +105,31 @@ def get_fastest_path_moves(fastest_path):
 
     return moves_arduino
 
+def add_calibration_to_arduino_moves(moves_arduino, robot):
+    from Algo.real_robot import Robot
+    clone_robot = Robot(exploration_status=robot.exploration_status,
+                        facing=robot.facing,
+                        discovered_map=robot.discovered_map)
+    is_calibration = False
+    moves_ardiono_with_calibration = []
+    for moves in moves_arduino:
+        if moves[0] is not 'W':
+            is_calibration = True
+        new_move = ''
+        for move in moves:
+            new_move += move
+            clone_robot.move_robot_algo(convert_arduino_cmd_to_direction(move))
+            if is_calibration and clone_robot.is_calibrate_side_possible():
+                moves_ardiono_with_calibration.append(new_move)
+                moves_ardiono_with_calibration.append('C')
+                is_calibration = False
+                new_move = ''
+        if new_move != '':
+            moves_ardiono_with_calibration.append(new_move)
+    print('Arduino Commands with Calibration: {}'.format(moves_ardiono_with_calibration))
+
+    return moves_ardiono_with_calibration
+
 
 def disable_print():
     """ Suppress output from the print() function by piping stdout to /dev/null. """

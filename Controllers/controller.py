@@ -98,6 +98,13 @@ class Controller:
             self.is_arrow_scan = False
         elif msg == 'S':
             self._sender.send_arduino(ARDUINO_SENSOR)
+        elif msg == ANDROID_BATTERY_DRAINER:
+            thread = threading.Thread(target=self._battery_drainer)
+            thread.daemon = True
+            thread.start()
+            enable_print()
+            print('START BATTERY DRAINER')
+            disable_print()
 
     def _load_explore_map(self):
 
@@ -143,6 +150,17 @@ class Controller:
         enable_print()
         print('Calibrating Done!')
         disable_print()
+
+    def _battery_drainer(self):
+        for j in range(2):
+            for i in range(min(BATTERY_DRAINER_STEP_Y, 17)):
+                self._robot.move_robot(self._sender, FORWARD)
+            self._sender.send_arduino(BATTERY_DRAINER_TURN)
+            self._sender.wait_arduino(ARDUIMO_MOVED)
+            for i in range(min(BATTERY_DRAINER_STEP_X, 12)):
+                self._robot.move_robot(self._sender, FORWARD)
+            self._sender.send_arduino(BATTERY_DRAINER_TURN)
+            self._sender.wait_arduino(ARDUIMO_MOVED)
 
     def _update_android(self):
         """

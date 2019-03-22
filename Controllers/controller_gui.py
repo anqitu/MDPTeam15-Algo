@@ -154,6 +154,13 @@ class Window(Frame):
             self.is_arrow_scan = False
         elif msg == 'S':
             self._sender.send_arduino(ARDUINO_SENSOR)
+        elif msg == ANDROID_BATTERY_DRAINER:
+            thread = threading.Thread(target=self._battery_drainer)
+            thread.daemon = True
+            thread.start()
+            enable_print()
+            print('START BATTERY DRAINER')
+            disable_print()
 
     def _load_explore_map(self):
         from Algo.real_robot import Robot
@@ -198,6 +205,17 @@ class Window(Frame):
         enable_print()
         print('Calibrating Done!')
         disable_print()
+
+    def _battery_drainer(self):
+        for j in range(2):
+            for i in range(min(BATTERY_DRAINER_STEP_Y, 17)):
+                self._robot.move_robot(self._sender, FORWARD)
+            self._sender.send_arduino(BATTERY_DRAINER_TURN)
+            self._sender.wait_arduino(ARDUIMO_MOVED)
+            for i in range(min(BATTERY_DRAINER_STEP_X, 12)):
+                self._robot.move_robot(self._sender, FORWARD)
+            self._sender.send_arduino(BATTERY_DRAINER_TURN)
+            self._sender.wait_arduino(ARDUIMO_MOVED)
 
     def _update_android(self):
         """
@@ -394,20 +412,21 @@ class Window(Frame):
         """Move the robot along the fastest path."""
         if self._fastest_path:
             self._robot.is_fast_path = True
-            move_strs = get_fastest_path_moves(self._fastest_path)
-            self._sender.send_arduino(''.join(move_strs))
+            moves_arduino = get_fastest_path_moves(self._fastest_path)
+            moves_ardiono_with_calibration = add_calibration_to_arduino_moves(moves_arduino, self._robot)
 
-            for move_str in move_strs:
-                for cmd in move_str:
-                    sleep(0.7)
+            self._sender.send_arduino(''.join(moves_ardiono_with_calibration))
 
-                    self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
-                    if convert_arduino_cmd_to_direction(cmd) == FORWARD:
-                        self._move_robot(convert_arduino_cmd_to_direction(cmd))
-                    else:
-                        self._turn_head(self._facing, convert_arduino_cmd_to_direction(cmd))
+            for move in ''.join(moves_arduino):
+                sleep(0.7)
 
-                    self._update_android()
+                self._robot.move_robot_algo(convert_arduino_cmd_to_direction(move))
+                if convert_arduino_cmd_to_direction(move) == FORWARD:
+                    self._move_robot(convert_arduino_cmd_to_direction(move))
+                else:
+                    self._turn_head(self._facing, convert_arduino_cmd_to_direction(move))
+
+                self._update_android()
 
             enable_print()
             print('Reached GOAL!')
