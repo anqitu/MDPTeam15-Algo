@@ -27,7 +27,7 @@ def get_fastest_path_moves(fastest_path):
 
 FAST_PATH_STEP = 100
 get_fastest_path_moves([0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 1, -1, 0, 0, 1, 0, 0, 0])
-moves_arduino = ['WW', 'D', 'WW', 'A', 'WWWWWWWW', 'D', 'WWWWW', 'A', 'WWWW', 'D', 'W', 'A', 'WWW', 'D', 'WWWW']
+moves_arduino = get_fastest_path_moves([0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 1, -1, 0, 0, 1, 0, 0, 0])
 
 clone_robot = Robot(exploration_status=self._robot.exploration_status,
                     facing=self._robot.facing,
@@ -40,13 +40,18 @@ for moves in moves_arduino:
         is_calibration = True
     new_move = ''
     for move in moves:
-        new_move += move
-        clone_robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
-        if is_calibration and clone_robot.is_calibrate_side_possible():
-            moves_ardiono_with_calibration.append(new_move)
-            moves_ardiono_with_calibration.append('C')
-            new_move = ''
+        if move != 'B':
+            new_move += move
+            clone_robot.move_robot_algo(convert_arduino_cmd_to_direction(move))
+            if is_calibration and clone_robot.is_calibrate_side_possible():
+                if new_move[0] == 'W':
+                    new_move += 'B'
+                moves_ardiono_with_calibration.append(new_move)
+                moves_ardiono_with_calibration.append('C')
+                new_move = ''
     if new_move != '':
+        if new_move[0] == 'W':
+            new_move += 'B'
         moves_ardiono_with_calibration.append(new_move)
 print('Arduino Commands with Calidation: {}'.format(moves_ardiono_with_calibration))
 

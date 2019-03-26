@@ -420,13 +420,15 @@ class Window(Frame):
             for move in ''.join(moves_arduino):
                 sleep(0.7)
 
-                self._robot.move_robot_algo(convert_arduino_cmd_to_direction(move))
-                if convert_arduino_cmd_to_direction(move) == FORWARD:
-                    self._move_robot(convert_arduino_cmd_to_direction(move))
-                else:
-                    self._turn_head(self._facing, convert_arduino_cmd_to_direction(move))
+                if move != 'B':
 
-                self._update_android()
+                    self._robot.move_robot_algo(convert_arduino_cmd_to_direction(move))
+                    if convert_arduino_cmd_to_direction(move) == FORWARD:
+                        self._move_robot(convert_arduino_cmd_to_direction(move))
+                    else:
+                        self._turn_head(self._facing, convert_arduino_cmd_to_direction(move))
+
+                    self._update_android()
 
             enable_print()
             print('Reached GOAL!')

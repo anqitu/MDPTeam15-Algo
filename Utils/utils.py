@@ -71,7 +71,7 @@ def get_arduino_cmd(direction):
 
 def convert_arduino_cmd_to_direction(cmd):
     """ Return the appropriate command to send to the Arduino for it to turn or move in a certain direction. """
-    if cmd == ARDUINO_FORWARD:
+    if cmd == ARDUINO_FORWARD or cmd == ARDUINO_FORWARD[0]:
         return FORWARD
     if cmd == ARDUINO_TURN_LEFT:
         return LEFT
@@ -117,16 +117,21 @@ def add_calibration_to_arduino_moves(moves_arduino, robot):
             is_calibration = True
         new_move = ''
         for move in moves:
-            new_move += move
-            clone_robot.move_robot_algo(convert_arduino_cmd_to_direction(move))
-            if is_calibration and clone_robot.is_calibrate_side_possible():
-                moves_ardiono_with_calibration.append(new_move)
-                moves_ardiono_with_calibration.append('C')
-                is_calibration = False
-                new_move = ''
+            if move != 'B':
+                new_move += move
+                print(move)
+                clone_robot.move_robot_algo(convert_arduino_cmd_to_direction(move))
+                if is_calibration and clone_robot.is_calibrate_side_possible():
+                    if new_move[0] == 'W':
+                        new_move += 'B'
+                    moves_ardiono_with_calibration.append(new_move)
+                    moves_ardiono_with_calibration.append('C')
+                    new_move = ''
         if new_move != '':
+            if new_move[0] == 'W':
+                new_move += 'B'
             moves_ardiono_with_calibration.append(new_move)
-    print('Arduino Commands with Calibration: {}'.format(moves_ardiono_with_calibration))
+    print('Arduino Commands with Calidation: {}'.format(moves_ardiono_with_calibration))
 
     return moves_ardiono_with_calibration
 
