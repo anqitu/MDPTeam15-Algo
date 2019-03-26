@@ -133,6 +133,7 @@ class Robot:
         discovered_map = self.discovered_map
 
         camera_facing = (facing + CAMERA_FACING) % 4
+        arrow_direction = (camera_facing + 2) % 4
 
         try:
             distance = 2
@@ -142,12 +143,12 @@ class Robot:
                     raise IndexError
                 index = 0
                 for i, j in [(new_x, y - 1), (new_x, y)]:
-                    print('Check Arrow @ {}'.format((i, j, DIRECTIONS[camera_facing])))
+                    print('Check Arrow @ {}'.format((i, j, DIRECTIONS[arrow_direction])))
                     if discovered_map[j][i] == 1:
                         if result[index] == '1':
-                            self.arrows.append((j, i, camera_facing))
-                            self.arrows_arduino.append(','.join([str(i), str(19-j), str(camera_facing)]))
-                            print('Detected Arrow @ {}'.format((i, j, DIRECTIONS[camera_facing])))
+                            self.arrows.append((j, i, arrow_direction))
+                            self.arrows_arduino.append(','.join([str(i), str(19-j), str(arrow_direction)]))
+                            print('Detected Arrow @ {}'.format((i, j, DIRECTIONS[arrow_direction])))
                     index += 1
             elif camera_facing == NORTH:
                 new_y = y + distance
@@ -155,12 +156,12 @@ class Robot:
                     raise IndexError
                 index = 0
                 for i, j in [(x - 1, new_y), (x, new_y)]:
-                    print('Check Arrow @ {}'.format((i, j, DIRECTIONS[camera_facing])))
+                    print('Check Arrow @ {}'.format((i, j, DIRECTIONS[arrow_direction])))
                     if discovered_map[j][i] == 1:
                         if result[index] == '1':
-                            self.arrows.append((j, i, camera_facing))
-                            self.arrows_arduino.append(','.join([str(i), str(19-j), str(camera_facing)]))
-                            print('Detected Arrow @ {}'.format((i, j, DIRECTIONS[camera_facing])))
+                            self.arrows.append((j, i, arrow_direction))
+                            self.arrows_arduino.append(','.join([str(i), str(19-j), str(arrow_direction)]))
+                            print('Detected Arrow @ {}'.format((i, j, DIRECTIONS[arrow_direction])))
                     index += 1
             elif camera_facing == EAST:
                 new_x = x + distance
@@ -168,12 +169,12 @@ class Robot:
                     raise IndexError
                 index = 0
                 for i, j in [(new_x, y + 1), (new_x, y)]:
-                    print('Check Arrow @ {}'.format((i, j, DIRECTIONS[camera_facing])))
+                    print('Check Arrow @ {}'.format((i, j, DIRECTIONS[arrow_direction])))
                     if discovered_map[j][i] == 1:
                         if result[index] == '1':
-                            self.arrows.append((j, i, camera_facing))
-                            self.arrows_arduino.append(','.join([str(i), str(19-j), str(camera_facing)]))
-                            print('Detected Arrow @ {}'.format((i, j, DIRECTIONS[camera_facing])))
+                            self.arrows.append((j, i, arrow_direction))
+                            self.arrows_arduino.append(','.join([str(i), str(19-j), str(arrow_direction)]))
+                            print('Detected Arrow @ {}'.format((i, j, DIRECTIONS[arrow_direction])))
                     index += 1
             elif camera_facing == SOUTH:
                 new_y = y - distance
@@ -181,12 +182,12 @@ class Robot:
                     raise IndexError
                 index = 0
                 for i, j in [(x + 1, new_y), (x, new_y)]:
-                    print('Check Arrow @ {}'.format((i, j, DIRECTIONS[camera_facing])))
+                    print('Check Arrow @ {}'.format((i, j, DIRECTIONS[arrow_direction])))
                     if discovered_map[j][i] == 1:
                         if result[index] == '1':
-                            self.arrows.append((j, i, camera_facing))
-                            self.arrows_arduino.append(','.join([str(i), str(19-j), str(camera_facing)]))
-                            print('Detected Arrow @ {}'.format((i, j, DIRECTIONS[camera_facing])))
+                            self.arrows.append((j, i, arrow_direction))
+                            self.arrows_arduino.append(','.join([str(i), str(19-j), str(arrow_direction)]))
+                            print('Detected Arrow @ {}'.format((i, j, DIRECTIONS[arrow_direction])))
                     index += 1
         except IndexError:
             return
