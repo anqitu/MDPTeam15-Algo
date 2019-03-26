@@ -122,14 +122,14 @@ def add_calibration_to_arduino_moves(moves_arduino, robot):
                 print(move)
                 clone_robot.move_robot_algo(convert_arduino_cmd_to_direction(move))
                 if is_calibration and clone_robot.is_calibrate_side_possible():
-                    if new_move[0] == 'W':
-                        new_move += 'B'
+                    # if new_move[0] == 'W':
+                    #     new_move += 'B'
                     moves_ardiono_with_calibration.append(new_move)
                     moves_ardiono_with_calibration.append('C')
                     new_move = ''
         if new_move != '':
-            if new_move[0] == 'W':
-                new_move += 'B'
+            # if new_move[0] == 'W':
+                # new_move += 'B'
             moves_ardiono_with_calibration.append(new_move)
     print('Arduino Commands with Calidation: {}'.format(moves_ardiono_with_calibration))
 
