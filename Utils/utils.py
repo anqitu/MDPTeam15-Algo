@@ -71,7 +71,7 @@ def get_arduino_cmd(direction):
 
 def convert_arduino_cmd_to_direction(cmd):
     """ Return the appropriate command to send to the Arduino for it to turn or move in a certain direction. """
-    if cmd == ARDUINO_FORWARD or cmd == ARDUINO_FORWARD[0]:
+    if cmd == ARDUINO_FORWARD or cmd == ARDUINO_FORWARD[0] or cmd in ['2','3','4','5','6']:
         return FORWARD
     if cmd == ARDUINO_TURN_LEFT:
         return LEFT
@@ -102,33 +102,56 @@ def get_fastest_path_moves(fastest_path):
         moves_arduino = moves_arduino + [move[i:i+FAST_PATH_STEP] for i in range(0, len(move), FAST_PATH_STEP)]
 
     print('Arduino Commands: {}'.format(moves_arduino))
+    #
+    # return moves_arduino
 
     # Convert arduino forward movements Commands "WWWWDWAWW" will be converted to "4DWA2". 6 forward is max, 1 forward remains as W
     # 1 forward: W
     # 2 forward: 2
     # 6 forward: 6
-    count_w = 0
     moves_arduino_2 = []
-    for i in range(len(moves_arduino)):
-        if moves_arduino[i] == "W":
-            count_w++;
+    for move in moves_arduino:
+        if move[0] == 'W':
+            if len(move) == 1:
+                moves_arduino_2.append(move)
+            else:
+                if len(move) > 6:
+                    moves_arduino_2.append(str(6))
+                    moves_arduino_2.append(str(len(move)-6))
+                else:
+                    moves_arduino_2.append(str(len(move)))
         else:
-            if count_w == 1:
-                moves_arduino_2.append(moves_arduino[i-1])
-            else if count_w != 0 && count_w < 7:
-                moves_arduino_2.append(count_w)
-                count_w = 0
-            moves_arduino_2.append(moves_arduino[i])
+            moves_arduino_2.append(move)
 
-    # Check if count_w is empty
-    if count_w != 0:
-        if count_w == 1:
-            moves_arduino_2.append("W")
-        else:
-            moves_arduino_2.append(count_w)
+    print('New Arduino Commands: {}'.format(moves_arduino_2))
 
-    #return moves_arduino
     return moves_arduino_2
+
+    # count_w = 0
+    # # moves_arduino_2
+    # for i in range(len(moves)):
+    #     if moves[i] == "W":
+    #         count_w++;
+    #     else:
+    #         if count_w == 1:
+    #             moves_arduino_2 = moves_arduino_2+moves[i-1]
+    #             # moves_arduino_2.append(moves[i-1])
+    #         else if count_w != 0 && count_w < 7:
+    #             moves_arduino_2 = moves_arduino_2+count_w
+    #             # moves_arduino_2.append(count_w)
+    #             count_w = 0
+    #         # moves_arduino_2.append(moves[i])
+    #         moves_arduino_2 = moves_arduino_2+moves[i]
+    #
+    # # Check if count_w is empty
+    # if count_w != 0:
+    #     if count_w == 1:
+    #         moves_arduino_2.append("W")
+    #     else:
+    #         moves_arduino_2.append(count_w)
+    #
+    # print('Arduino Commands NEW: {}'.format(moves_arduino_2))
+    # return moves_arduino_2
 
 def add_calibration_to_arduino_moves(moves_arduino, robot):
     from Algo.real_robot import Robot
