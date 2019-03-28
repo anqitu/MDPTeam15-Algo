@@ -73,6 +73,8 @@ class Window(Frame):
 
         disable_print()
 
+        self._set_way_point('3,17')
+
     def _init_window(self):
         """
         Load all window elements.
@@ -200,8 +202,8 @@ class Window(Frame):
         :return: N/A
         """
         for move in ['C', 'S', 'L', 'D', 'C', 'L', 'D', 'C']:
-            sender.send_arduino(move)
-            sender.wait_arduino(ARDUIMO_MOVED)
+            self._sender.send_arduino(move)
+            self._sender.wait_arduino(ARDUIMO_MOVED)
 
         enable_print()
         print('Calibrating Done!')

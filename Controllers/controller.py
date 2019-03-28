@@ -47,6 +47,8 @@ class Controller:
 
         self.is_arrow_scan = IS_ARROW_SCAN
 
+        self._set_way_point('3,17')
+
     def _receive_handler(self, msg):
         """
         Parse and handle messages from the Android device.
@@ -143,8 +145,8 @@ class Controller:
         :return: N/A
         """
         for move in ['C', 'S', 'L', 'D', 'C', 'L', 'D', 'C']:
-            sender.send_arduino(move)
-            sender.wait_arduino(ARDUIMO_MOVED)
+            self._sender.send_arduino(move)
+            self._sender.wait_arduino(ARDUIMO_MOVED)
 
         enable_print()
         print('Calibrating Done!')

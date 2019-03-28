@@ -337,33 +337,39 @@ class Robot:
             for cell in [0,2,1]:
                 if surround_status[SOUTH][cell] == 1:
                     print('Turn Backward to Calibrate Front')
-                    self.turn_robot(sender, BACKWARD)
+                    sender.send_arduino(get_arduino_cmd(BACKWARD))
+                    sender.wait_arduino(ARDUIMO_MOVED)
                     print('Calibrating Side Front {}'.format(CODE_MAP[cell]))
                     sender.send_arduino(CODE_MAP[cell])
                     sender.wait_arduino(ARDUIMO_MOVED)
                     print('Turn Backward after Calibrate Front')
-                    self.turn_robot(sender, BACKWARD)
+                    sender.send_arduino(get_arduino_cmd(BACKWARD))
+                    sender.wait_arduino(ARDUIMO_MOVED)
                     break
 
         for cell in [0,2,1]:
             if surround_status[WEST][cell] == 1:
                 print('Turn Left to Calibrate Front')
-                self.turn_robot(sender, LEFT)
+                sender.send_arduino(get_arduino_cmd(LEFT))
+                sender.wait_arduino(ARDUIMO_MOVED)
                 print('Calibrating Side Front {}'.format(CODE_MAP[cell]))
                 sender.send_arduino(CODE_MAP[cell])
                 sender.wait_arduino(ARDUIMO_MOVED)
                 print('Turn Right after Calibrate Front')
-                self.turn_robot(sender, RIGHT)
+                sender.send_arduino(get_arduino_cmd(RIGHT))
+                sender.wait_arduino(ARDUIMO_MOVED)
                 return True
         for cell in [0,2,1]:
             if surround_status[EAST][cell] == 1:
                 print('Turn Right to Calibrate Front')
-                self.turn_robot(sender, RIGHT)
+                sender.send_arduino(get_arduino_cmd(RIGHT))
+                sender.wait_arduino(ARDUIMO_MOVED)
                 print('Calibrating Side Front {}'.format(CODE_MAP[cell]))
                 sender.send_arduino(CODE_MAP[cell])
                 sender.wait_arduino(ARDUIMO_MOVED)
                 print('Turn Left after Calibrate Front')
-                self.turn_robot(sender, LEFT)
+                sender.send_arduino(get_arduino_cmd(LEFT))
+                sender.wait_arduino(ARDUIMO_MOVED)
                 return True
         return False
 

@@ -3,8 +3,8 @@
 """ Constants to play with (Start)"""
 IS_DEBUG_MODE = True # Whether enable console printout at the cost of a slower run
 IS_ARROW_SCAN = True # Whether scan for arrows during exploration
-CALIBRATION_SIDE_STEPS = 7 # Number of steps per side calibration
-CALIBRATION_FRONT_STEPS = 7 # Number of steps per front calibration
+CALIBRATION_SIDE_STEPS = 10 # Number of steps per side calibration
+CALIBRATION_FRONT_STEPS = 10 # Number of steps per front calibration
 TURNING_STEP = 2
 STRAIGHT_STEP = 1
 COMPLETION_THRESHOLD = 300 # Target threshold
@@ -21,8 +21,8 @@ IS_SLEEP = False
 SLEEP_SEC = 2
 
 # Sockets
-# WIFI_HOST = '192.168.15.15'
-WIFI_HOST = '127.0.0.1'
+WIFI_HOST = '192.168.15.15'
+# WIFI_HOST = '127.0.0.1'
 RPI_PORT = 6688
 
 # Directions
