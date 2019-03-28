@@ -124,6 +124,7 @@ def add_calibration_to_arduino_moves(moves_arduino, robot):
                 moves_ardiono_with_calibration.append(new_move)
                 moves_ardiono_with_calibration.append('C')
                 new_move = ''
+                is_calibration = False
         if new_move != '':
             moves_ardiono_with_calibration.append(new_move)
     print('Arduino Commands with Calibration: {}'.format(moves_ardiono_with_calibration))
@@ -138,11 +139,7 @@ def add_calibration_to_arduino_moves(moves_arduino, robot):
             if len(move) == 1:
                 moves_arduino.append(move)
             else:
-                if len(move) > FAST_PATH_STEP:
-                    moves_arduino.append(str(FAST_PATH_STEP))
-                    moves_arduino.append(str(len(move)-FAST_PATH_STEP))
-                else:
-                    moves_arduino.append(str(len(move)))
+                moves_arduino.append(str(len(move)))
         else:
             moves_arduino.append(move)
 

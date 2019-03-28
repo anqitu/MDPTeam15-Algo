@@ -21,8 +21,8 @@ IS_SLEEP = False
 SLEEP_SEC = 2
 
 # Sockets
-WIFI_HOST = '192.168.15.15'
-# WIFI_HOST = '127.0.0.1'
+# WIFI_HOST = '192.168.15.15'
+WIFI_HOST = '127.0.0.1'
 RPI_PORT = 6688
 
 # Directions
