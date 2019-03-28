@@ -273,7 +273,7 @@ class Robot:
 
         sender.send_arduino(get_arduino_cmd(direction))
         self.facing = (self.facing + direction) % 4
-        self.move_counts += 1
+        self.move_counts += TURNING_STEP
 
         sender.wait_arduino(ARDUIMO_MOVED)
 
@@ -306,7 +306,7 @@ class Robot:
         elif self.facing == WEST:
             self.center -= 1
 
-        self.move_counts += 1
+        self.move_counts += STRAIGHT_STEP
         updated_cells = self.mark_robot_standing()
 
         sender.wait_arduino(ARDUIMO_MOVED)

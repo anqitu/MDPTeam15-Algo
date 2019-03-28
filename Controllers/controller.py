@@ -123,8 +123,6 @@ class Controller:
         self._calibrate_after_exploration()
         sleep(1)
 
-
-
     def _set_way_point(self, coordinate):
         """
         Set the waypoint coordinates.
@@ -144,8 +142,9 @@ class Controller:
 
         :return: N/A
         """
-        self._robot.calibrate_side(self._sender)
-        self._robot.calibrate_front(self._sender)
+        for move in ['C', 'S', 'L', 'D', 'C', 'L', 'D', 'C']:
+            sender.send_arduino(move)
+            sender.wait_arduino(ARDUIMO_MOVED)
 
         enable_print()
         print('Calibrating Done!')
@@ -334,15 +333,18 @@ class Controller:
         """Move the robot along the fastest path."""
         if self._fastest_path:
             self._robot.is_fast_path = True
-            move_strs = get_fastest_path_moves(self._fastest_path)
-            self._sender.send_arduino(''.join(move_strs))
+            self._moves_arduino = get_fastest_path_moves(self._fastest_path)
+            moves_ardiono_with_calibration = add_calibration_to_arduino_moves(self._moves_arduino, self._robot)
 
-            for move_str in move_strs:
-                for cmd in move_str:
-                    sleep(0.7)
+            thread = threading.Thread(target=self._update_android_fast_path)
+            thread.daemon = True
+            thread.start()
 
-                    self._robot.move_robot_algo(convert_arduino_cmd_to_direction(cmd))
-                    self._update_android()
+            self._sender.send_arduino(''.join(moves_ardiono_with_calibration))
+
+            # for moves in moves_ardiono_with_calibration:
+            #     self._sender.send_arduino(moves)
+            #     self._sender.wait_arduino(ARDUIMO_MOVED)
 
             enable_print()
             print('Reached GOAL!')
@@ -351,6 +353,13 @@ class Controller:
             enable_print()
             print("No valid path")
             disable_print()
+
+    def _update_android_fast_path(self):
+        for move in ''.join(self._moves_arduino):
+            sleep(0.7)
+
+            self._robot.move_robot_algo(convert_arduino_cmd_to_direction(move))
+            self._update_android()
 
     def _load_map(self):
         """
