@@ -97,61 +97,13 @@ def get_fastest_path_moves(fastest_path):
 
     print('Original Commands: {}'.format(moves))
 
-    moves_arduino = []
+    moves_android = []
     for move in moves:
-        moves_arduino = moves_arduino + [move[i:i+FAST_PATH_STEP] for i in range(0, len(move), FAST_PATH_STEP)]
+        moves_android = moves_android + [move[i:i+FAST_PATH_STEP] for i in range(0, len(move), FAST_PATH_STEP)]
 
-    print('Arduino Commands: {}'.format(moves_arduino))
-    #
-    # return moves_arduino
+    print('Android Commands: {}'.format(moves_android))
 
-    # Convert arduino forward movements Commands "WWWWDWAWW" will be converted to "4DWA2". 6 forward is max, 1 forward remains as W
-    # 1 forward: W
-    # 2 forward: 2
-    # 6 forward: 6
-    moves_arduino_2 = []
-    for move in moves_arduino:
-        if move[0] == 'W':
-            if len(move) == 1:
-                moves_arduino_2.append(move)
-            else:
-                if len(move) > 6:
-                    moves_arduino_2.append(str(6))
-                    moves_arduino_2.append(str(len(move)-6))
-                else:
-                    moves_arduino_2.append(str(len(move)))
-        else:
-            moves_arduino_2.append(move)
-
-    print('New Arduino Commands: {}'.format(moves_arduino_2))
-
-    return moves_arduino_2
-
-    # count_w = 0
-    # # moves_arduino_2
-    # for i in range(len(moves)):
-    #     if moves[i] == "W":
-    #         count_w++;
-    #     else:
-    #         if count_w == 1:
-    #             moves_arduino_2 = moves_arduino_2+moves[i-1]
-    #             # moves_arduino_2.append(moves[i-1])
-    #         else if count_w != 0 && count_w < 7:
-    #             moves_arduino_2 = moves_arduino_2+count_w
-    #             # moves_arduino_2.append(count_w)
-    #             count_w = 0
-    #         # moves_arduino_2.append(moves[i])
-    #         moves_arduino_2 = moves_arduino_2+moves[i]
-    #
-    # # Check if count_w is empty
-    # if count_w != 0:
-    #     if count_w == 1:
-    #         moves_arduino_2.append("W")
-    #     else:
-    #         moves_arduino_2.append(count_w)
-    #
-    # print('Arduino Commands NEW: {}'.format(moves_arduino_2))
-    # return moves_arduino_2
+    return moves_android
 
 def add_calibration_to_arduino_moves(moves_arduino, robot):
     from Algo.real_robot import Robot
@@ -169,18 +121,34 @@ def add_calibration_to_arduino_moves(moves_arduino, robot):
             print(move)
             clone_robot.move_robot_algo(convert_arduino_cmd_to_direction(move))
             if is_calibration and clone_robot.is_calibrate_side_possible():
-                # if new_move[0] == 'W':
-                #     new_move += 'B'
                 moves_ardiono_with_calibration.append(new_move)
                 moves_ardiono_with_calibration.append('C')
                 new_move = ''
         if new_move != '':
-            # if new_move[0] == 'W':
-                # new_move += 'B'
             moves_ardiono_with_calibration.append(new_move)
-    print('Arduino Commands with Calidation: {}'.format(moves_ardiono_with_calibration))
+    print('Arduino Commands with Calibration: {}'.format(moves_ardiono_with_calibration))
 
-    return moves_ardiono_with_calibration
+    # Convert arduino forward movements Commands "WWWWDWAWW" will be converted to "4DWA2". 6 forward is max, 1 forward remains as W
+    # 1 forward: W
+    # 2 forward: 2
+    # 6 forward: 6
+    moves_arduino = []
+    for move in moves_ardiono_with_calibration:
+        if move[0] == 'W':
+            if len(move) == 1:
+                moves_arduino.append(move)
+            else:
+                if len(move) > FAST_PATH_STEP:
+                    moves_arduino.append(str(FAST_PATH_STEP))
+                    moves_arduino.append(str(len(move)-FAST_PATH_STEP))
+                else:
+                    moves_arduino.append(str(len(move)))
+        else:
+            moves_arduino.append(move)
+
+    print('New Arduino Commands: {}'.format(moves_arduino))
+
+    return moves_arduino
 
 
 def disable_print():
