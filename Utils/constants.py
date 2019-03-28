@@ -3,8 +3,8 @@
 """ Constants to play with (Start)"""
 IS_DEBUG_MODE = True # Whether enable console printout at the cost of a slower run
 IS_ARROW_SCAN = True # Whether scan for arrows during exploration
-CALIBRATION_SIDE_STEPS = 8 # Number of steps per side calibration
-CALIBRATION_FRONT_STEPS = 8 # Number of steps per front calibration
+CALIBRATION_SIDE_STEPS = 7 # Number of steps per side calibration
+CALIBRATION_FRONT_STEPS = 7 # Number of steps per front calibration
 TURNING_STEP = 2
 STRAIGHT_STEP = 1
 COMPLETION_THRESHOLD = 300 # Target threshold

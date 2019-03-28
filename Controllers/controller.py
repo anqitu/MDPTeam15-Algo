@@ -342,7 +342,8 @@ class Controller:
             thread.daemon = True
             thread.start()
 
-            self._sender.send_arduino(''.join(moves_ardiono_with_calibration))
+            # self._sender.send_arduino(''.join(moves_ardiono_with_calibration))
+            self._sender.send_arduino(''.join([s for s in moves_ardiono_with_calibration if s !='C']))
 
             # for moves in moves_ardiono_with_calibration:
             #     self._sender.send_arduino(moves)
