@@ -103,7 +103,32 @@ def get_fastest_path_moves(fastest_path):
 
     print('Arduino Commands: {}'.format(moves_arduino))
 
-    return moves_arduino
+    # Convert arduino forward movements Commands "WWWWDWAWW" will be converted to "4DWA2". 6 forward is max, 1 forward remains as W
+    # 1 forward: W
+    # 2 forward: 2
+    # 6 forward: 6
+    count_w = 0
+    moves_arduino_2 = []
+    for i in range(len(moves_arduino)):
+        if moves_arduino[i] == "W":
+            count_w++;
+        else:
+            if count_w == 1:
+                moves_arduino_2.append(moves_arduino[i-1])
+            else if count_w != 0 && count_w < 7:
+                moves_arduino_2.append(count_w)
+                count_w = 0
+            moves_arduino_2.append(moves_arduino[i])
+
+    # Check if count_w is empty
+    if count_w != 0:
+        if count_w == 1:
+            moves_arduino_2.append("W")
+        else:
+            moves_arduino_2.append(count_w)
+
+    #return moves_arduino
+    return moves_arduino_2
 
 def add_calibration_to_arduino_moves(moves_arduino, robot):
     from Algo.real_robot import Robot
