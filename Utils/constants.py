@@ -157,6 +157,10 @@ ARDUINO_TURN_RIGHT = 'D'
 ARDUINO_TURN_TO_BACKWARD = 'S'
 ARDUIMO_MOVED = 'M'
 
+import re
+regex_str = '^(\d*,){%s}$' % (6)
+ARDUINO_READINGS_REGEX = re.compile(regex_str)
+
 # RPi
 API_TAKEN_PHOTO = 'I'
 

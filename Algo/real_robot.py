@@ -45,9 +45,6 @@ class Robot:
         ]
         self.real_map = []
 
-        regex_str = '^(\d*,){%s}$' % (len(self.sensors))
-        self._readings_regex_arduino = re.compile(regex_str)
-
         regex_str = '[01]{2}'
         self._readings_regex_rpi = re.compile(regex_str)
 
@@ -275,13 +272,16 @@ class Robot:
         self.facing = (self.facing + direction) % 4
         self.move_counts += TURNING_STEP
 
-        sender.wait_arduino(ARDUIMO_MOVED)
+        # sender.wait_arduino(ARDUIMO_MOVED)
+        readings = sender.wait_arduino(ARDUINO_READINGS_REGEX, is_regex=True)
 
         if self.is_calibrate_side_possible():
             self.calibrate_side(sender)
 
         if is_arrow_scan and not self.is_fast_path:
             self.check_arrow(sender)
+
+        return readings
 
     def move_robot(self, sender, direction, is_arrow_scan = False):
         """
@@ -309,17 +309,18 @@ class Robot:
         self.move_counts += STRAIGHT_STEP
         updated_cells = self.mark_robot_standing()
 
-        sender.wait_arduino(ARDUIMO_MOVED)
+        # sender.wait_arduino(ARDUIMO_MOVED)
+        readings = sender.wait_arduino(ARDUINO_READINGS_REGEX, is_regex=True)
 
         if is_arrow_scan and not self.is_fast_path:
             self.check_arrow(sender)
 
-        return updated_cells
+        return readings, updated_cells
 
     def calibrate_side(self, sender):
         print('Calibrating Side')
         sender.send_arduino('C')
-        sender.wait_arduino(ARDUIMO_MOVED)
+        # sender.wait_arduino(ARDUIMO_MOVED)
 
     def calibrate_front(self, sender):
         surround_status = self.robot_surround_status()
@@ -643,7 +644,7 @@ class Robot:
         else:
             print('Arrow Not Possible @ Robot Position: {}'.format((x, y, DIRECTIONS[self.facing])))
 
-    def get_sensor_readings(self, sender, is_arrow_scan = False):
+    def get_sensor_readings(self, readings, sender, is_arrow_scan = False):
         """
         Send a message to the Arduino to take sensor readings.
 
@@ -656,8 +657,8 @@ class Robot:
         :param sender: The object that communicates with the RPi
         :return: The updated cell values and indexes.
         """
-        sender.send_arduino(ARDUINO_SENSOR)
-        readings = sender.wait_arduino(self._readings_regex_arduino, is_regex=True)
+        # sender.send_arduino(ARDUINO_SENSOR)
+        # readings = sender.wait_arduino(ARDUINO_READINGS_REGEX, is_regex=True)
         readings = readings.split(',')
         del readings[-1]
 
@@ -848,10 +849,10 @@ class Robot:
 
         return updated_cells, is_blind_range_undetected_obstacle
 
-    def get_sensor_readings_blind_range(self, sender):
+    def get_sensor_readings_blind_range(self, readings, sender):
 
-        sender.send_arduino(ARDUINO_SENSOR)
-        readings = sender.wait_arduino(self._readings_regex_arduino, is_regex=True)
+        # sender.send_arduino(ARDUINO_SENSOR)
+        # readings = sender.wait_arduino(ARDUINO_READINGS_REGEX, is_regex=True)
         readings = readings.split(',')
         del readings[-1]
 

@@ -265,13 +265,16 @@ class Exploration:
         while True:
             try:
                 # Left-wall-hugging until loop
+                sender.send_arduino(ARDUINO_SENSOR)
+                readings = sender.wait_arduino(ARDUINO_READINGS_REGEX, is_regex=True)
+
                 while not is_back_at_start:
-                    updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(sender, self.is_arrow_scan)
+                    updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(readings, sender, self.is_arrow_scan)
                     yield updated_cells
 
                     if is_blind_range_undetected_obstacle:
                         if self._robot.check_free(LEFT) or self._robot.check_free(FORWARD):
-                            self._robot.turn_robot(sender, RIGHT, self.is_arrow_scan)
+                            readings = self._robot.turn_robot(sender, RIGHT, self.is_arrow_scan)
                             print('Blind Range Undetected Obstacle Observed: Turn right to get sensor reading')
                             yield RIGHT, TURN, {}
 
@@ -281,7 +284,7 @@ class Exploration:
                             is_back_at_start = False
                             yield is_back_at_start
 
-                            updated_cells = self._robot.get_sensor_readings_blind_range(sender)
+                            updated_cells = self._robot.get_sensor_readings_blind_range(readings, sender)
                             yield updated_cells
 
                             print('Turn Left to get back to original track')
@@ -294,15 +297,15 @@ class Exploration:
                             yield updated_cells
 
                     if self._robot.check_free(LEFT):
-                        updated_cells = self._robot.move_robot(sender, LEFT, self.is_arrow_scan)
+                        readings, updated_cells = self._robot.move_robot(sender, LEFT, self.is_arrow_scan)
                         print('LEFT Free')
                         yield LEFT, MOVE, updated_cells
                     elif self._robot.check_free(FORWARD):
                         print('Forward Free')
-                        updated_cells = self._robot.move_robot(sender, FORWARD, self.is_arrow_scan)
+                        readings, updated_cells = self._robot.move_robot(sender, FORWARD, self.is_arrow_scan)
                         yield FORWARD, MOVE, updated_cells
                     else:
-                        self._robot.turn_robot(sender, RIGHT, self.is_arrow_scan)
+                        readings, updated_cells = self._robot.turn_robot(sender, RIGHT, self.is_arrow_scan)
                         yield RIGHT, TURN, {}
 
                     is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
@@ -358,8 +361,12 @@ class Exploration:
                             print('WARNING: Cannot find shortest path moves to unexplored')
                             raise PathNotFound
 
+                        sender.send_arduino(ARDUINO_SENSOR)
+                        readings = sender.wait_arduino(ARDUINO_READINGS_REGEX, is_regex=True)
+
                         for move in moves:
-                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(sender, self.is_arrow_scan)
+
+                            updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(readings, sender, self.is_arrow_scan)
                             if updated_cells:
                                 is_complete = self._robot.is_complete(self._exploration_limit, self._start_time,
                                                         self._time_limit)
@@ -375,7 +382,7 @@ class Exploration:
                                 print('Blind Range Undetected Obstacle Observed: Turn right to get sensor reading')
                                 yield "turned", RIGHT, False
 
-                                updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(sender, self.is_arrow_scan)
+                                updated_cells, is_blind_range_undetected_obstacle = self._robot.get_sensor_readings(readings, sender, self.is_arrow_scan)
 
                                 if updated_cells:
                                     is_complete = self._robot.is_complete(self._exploration_limit, self._start_time,
@@ -390,7 +397,7 @@ class Exploration:
                                 self._robot.turn_robot(sender, LEFT, self.is_arrow_scan)
                                 yield "turned", LEFT, False
 
-                            updated_cells = self._robot.move_robot(sender, move, self.is_arrow_scan)
+                            readings, updated_cells = self._robot.move_robot(sender, move, self.is_arrow_scan)
                             yield "moved", move, False
 
                             if updated_cells:
