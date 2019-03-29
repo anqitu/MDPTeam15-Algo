@@ -359,7 +359,7 @@ class Controller:
 
     def _update_android_fast_path(self):
         for move in ''.join(self._moves_arduino):
-            sleep(0.7)
+            sleep(ANDROID_FAST_PATH_SLEEP_SEC)
 
             self._robot.move_robot_algo(convert_arduino_cmd_to_direction(move))
             self._update_android()
