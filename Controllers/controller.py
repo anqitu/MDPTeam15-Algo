@@ -146,7 +146,10 @@ class Controller:
         """
         for move in ['C', 'S', 'L', 'D', 'C', 'L', 'D', 'C']:
             self._sender.send_arduino(move)
-            self._sender.wait_arduino(ARDUIMO_MOVED)
+            if move in ['C', 'L', 'M', 'T']:
+                self._sender.wait_arduino(ARDUIMO_MOVED)
+            else:
+                self._sender.wait_arduino(ARDUINO_READINGS_REGEX, is_regex=True)
 
         enable_print()
         print('Calibrating Done!')

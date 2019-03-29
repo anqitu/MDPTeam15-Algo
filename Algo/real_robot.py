@@ -320,7 +320,7 @@ class Robot:
     def calibrate_side(self, sender):
         print('Calibrating Side')
         sender.send_arduino('C')
-        # sender.wait_arduino(ARDUIMO_MOVED)
+        sender.wait_arduino(ARDUIMO_MOVED)
 
     def calibrate_front(self, sender):
         surround_status = self.robot_surround_status()
@@ -339,38 +339,38 @@ class Robot:
                 if surround_status[SOUTH][cell] == 1:
                     print('Turn Backward to Calibrate Front')
                     sender.send_arduino(get_arduino_cmd(BACKWARD))
-                    sender.wait_arduino(ARDUIMO_MOVED)
+                    sender.wait_arduino(ARDUINO_READINGS_REGEX, is_regex=True)
                     print('Calibrating Side Front {}'.format(CODE_MAP[cell]))
                     sender.send_arduino(CODE_MAP[cell])
                     sender.wait_arduino(ARDUIMO_MOVED)
                     print('Turn Backward after Calibrate Front')
                     sender.send_arduino(get_arduino_cmd(BACKWARD))
-                    sender.wait_arduino(ARDUIMO_MOVED)
+                    sender.wait_arduino(ARDUINO_READINGS_REGEX, is_regex=True)
                     break
 
         for cell in [0,2,1]:
             if surround_status[WEST][cell] == 1:
                 print('Turn Left to Calibrate Front')
                 sender.send_arduino(get_arduino_cmd(LEFT))
-                sender.wait_arduino(ARDUIMO_MOVED)
+                sender.wait_arduino(ARDUINO_READINGS_REGEX, is_regex=True)
                 print('Calibrating Side Front {}'.format(CODE_MAP[cell]))
                 sender.send_arduino(CODE_MAP[cell])
                 sender.wait_arduino(ARDUIMO_MOVED)
                 print('Turn Right after Calibrate Front')
                 sender.send_arduino(get_arduino_cmd(RIGHT))
-                sender.wait_arduino(ARDUIMO_MOVED)
+                sender.wait_arduino(ARDUINO_READINGS_REGEX, is_regex=True)
                 return True
         for cell in [0,2,1]:
             if surround_status[EAST][cell] == 1:
                 print('Turn Right to Calibrate Front')
                 sender.send_arduino(get_arduino_cmd(RIGHT))
-                sender.wait_arduino(ARDUIMO_MOVED)
+                sender.wait_arduino(ARDUINO_READINGS_REGEX, is_regex=True)
                 print('Calibrating Side Front {}'.format(CODE_MAP[cell]))
                 sender.send_arduino(CODE_MAP[cell])
                 sender.wait_arduino(ARDUIMO_MOVED)
                 print('Turn Left after Calibrate Front')
                 sender.send_arduino(get_arduino_cmd(LEFT))
-                sender.wait_arduino(ARDUIMO_MOVED)
+                sender.wait_arduino(ARDUINO_READINGS_REGEX, is_regex=True)
                 return True
         return False
 

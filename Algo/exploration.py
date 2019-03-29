@@ -305,7 +305,7 @@ class Exploration:
                         readings, updated_cells = self._robot.move_robot(sender, FORWARD, self.is_arrow_scan)
                         yield FORWARD, MOVE, updated_cells
                     else:
-                        readings, updated_cells = self._robot.turn_robot(sender, RIGHT, self.is_arrow_scan)
+                        readings = self._robot.turn_robot(sender, RIGHT, self.is_arrow_scan)
                         yield RIGHT, TURN, {}
 
                     is_complete = self._robot.is_complete(self._exploration_limit, self._start_time, self._time_limit)
