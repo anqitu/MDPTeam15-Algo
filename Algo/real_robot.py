@@ -547,6 +547,22 @@ class Robot:
 
         return False
 
+    def is_at_corner(self):
+        y, x = get_matrix_coords(self.center)
+        facing = self.facing
+
+        if facing == WEST:
+            if y == 1 and x == 13:
+                return True
+        elif facing == EAST:
+            if y == 17 and x == 1:
+                return True
+        elif facing == SOUTH:
+            if y == 17 and x == 13:
+                return True
+
+        return False
+
     def is_arrow_possible(self):
         """
         # Camera put on the west of the robot to detect the left and middle image
@@ -831,14 +847,14 @@ class Robot:
 
         print('-' * 50)
         print('Total move counts: {}'.format(self.move_counts))
-        if self.move_counts % CALIBRATION_SIDE_STEPS == 0:
+        if self.is_at_corner() or self.move_counts % CALIBRATION_SIDE_STEPS == 0:
             self.is_calibration_side_time = True
             print('Time to Calibrate')
         if self.is_calibration_side_time and self.is_calibrate_side_possible():
             self.calibrate_side(sender)
             self.is_calibration_side_time = False
 
-        if self.move_counts % CALIBRATION_FRONT_STEPS == 0:
+        if self.is_at_corner() or self.move_counts % CALIBRATION_FRONT_STEPS == 0:
             self.is_calibration_front_time = True
             print('Time to Calibrate')
         if self.is_calibration_front_time:
