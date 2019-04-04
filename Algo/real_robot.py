@@ -502,7 +502,7 @@ class Robot:
         cells_right = []
 
         if sensor_facing == WEST:
-            for distance in range(2, 4):
+            for distance in range(2, 3):
                 new_x = x - distance
                 if new_x < 0:
                     cells_left.append(1)
@@ -511,7 +511,7 @@ class Robot:
                     cells_left.append(discovered_map[y - 1][new_x])
                     cells_right.append(discovered_map[y + 1][new_x])
         elif sensor_facing == NORTH:
-            for distance in range(2, 4):
+            for distance in range(2, 3):
                 new_y = y + distance
                 if new_y > 19:
                     cells_left.append(1)
@@ -520,7 +520,7 @@ class Robot:
                     cells_left.append(discovered_map[new_y][x - 1])
                     cells_right.append(discovered_map[new_y][x + 1])
         elif sensor_facing == EAST:
-            for distance in range(2, 4):
+            for distance in range(2, 3):
                 new_x = x + distance
                 if new_x > 14:
                     cells_left.append(1)
@@ -529,7 +529,7 @@ class Robot:
                     cells_left.append(discovered_map[y + 1][new_x])
                     cells_right.append(discovered_map[y - 1][new_x])
         elif sensor_facing == SOUTH:
-            for distance in range(2, 4):
+            for distance in range(2, 3):
                 new_y = y - distance
                 if new_y < 0:
                     cells_left.append(1)
