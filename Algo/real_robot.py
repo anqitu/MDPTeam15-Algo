@@ -555,10 +555,10 @@ class Robot:
             if y == 1 and x == 13:
                 return True
         elif facing == EAST:
-            if y == 17 and x == 1:
+            if y == 18 and x == 1:
                 return True
         elif facing == SOUTH:
-            if y == 17 and x == 13:
+            if y == 18 and x == 13:
                 return True
 
         return False
